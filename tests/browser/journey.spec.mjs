@@ -1,0 +1,139 @@
+import { test, expect } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+const storageKey = 'rolebridge.private-profile.v1';
+async function completeProfile(page) {
+  await page.locator('#name').fill('Synthetic Alex');
+  await page.locator('#currentRole').fill('Customer support team lead');
+  await page.locator('#evidence').fill('Led a team of 9. Planned weekly cover and improved customer service reporting.');
+  await page.locator('#skills').fill('Excel, customer service');
+  await page.locator('#profile-confirmed').check();
+  await page.getByRole('button', { name: 'Continue to work preferences' }).click();
+  await page.locator('#minimumSalary').fill('40000');
+  await page.locator('#workMode').selectOption('hybrid');
+  await page.locator('#maxOfficeDays').selectOption('2');
+  await page.locator('#sponsorship').selectOption('no');
+  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+}
+async function fillVacancy(page) {
+  await page.getByRole('button', { name: 'Add a vacancy', exact: true }).click();
+  await page.locator('#job-title').fill('Synthetic service coordinator');
+  await page.locator('#job-employer').fill('Fictional Test Employer');
+  await page.locator('#job-url').fill('https://example.com/jobs/synthetic');
+  await page.locator('#job-description').fill('Coordinate customer service, plan schedules and prepare Excel reports. This is a synthetic test vacancy.');
+  await page.locator('#job-country').selectOption('GB');
+  await page.locator('#job-min').fill('40000');
+  await page.locator('#job-max').fill('46000');
+  await page.locator('#job-mode').selectOption('hybrid');
+  await page.locator('#job-office').selectOption('2');
+  await page.locator('#job-location-fits').selectOption('yes');
+  await page.locator('#job-essentials').selectOption('yes');
+  await page.locator('#job-status').selectOption('open');
+}
+
+test('real-input journey, conservative comparison, edits and removal', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/'); await completeProfile(page); await fillVacancy(page);
+  await page.getByRole('button', { name: 'Save and compare' }).click();
+  await expect(page.locator('.job-card .badge')).toHaveText('Consider');
+  await page.getByRole('button', { name: 'Add to your plan', exact: true }).click();
+  await expect(page.locator('#action-list')).toContainText('Synthetic service coordinator');
+  await page.getByRole('button', { name: 'Edit work preferences' }).click();
+  await page.locator('#workMode').selectOption('remote');
+  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await expect(page.locator('.job-card .badge')).toHaveText('Skip');
+  await expect(page.locator('#action-list')).not.toContainText('Synthetic service coordinator');
+  await page.getByRole('button', { name: 'Remove Synthetic service coordinator' }).click();
+  await page.getByRole('button', { name: 'Remove vacancy', exact: true }).click();
+  await expect(page.locator('.job-card')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('CV text never leaves the browser and storage requires explicit consent', async ({ page }) => {
+  const requests = []; page.on('request', request => requests.push({ url: request.url(), method: request.method(), body: request.postData() }));
+  await page.goto('/');
+  await page.locator('#cv-file').setInputFiles({ name: 'synthetic-cv.txt', mimeType: 'text/plain', buffer: Buffer.from('PRIVATE_RAW_CV_MARKER. Synthetic candidate with customer service, Excel and scheduling experience.') });
+  await expect(page.locator('#cv-text')).toHaveValue(/PRIVATE_RAW_CV_MARKER/);
+  await expect(page.locator('#skill-chips')).toContainText('Excel');
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
+  await completeProfile(page);
+  await page.getByRole('button', { name: 'Save on this device', exact: true }).click();
+  await page.getByRole('button', { name: 'Save my information', exact: true }).click();
+  await expect(page.locator('#save-error')).toContainText('Please confirm');
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
+  await page.locator('#save-consent').check(); await page.getByRole('button', { name: 'Save my information', exact: true }).click();
+  const saved = await page.evaluate(key => localStorage.getItem(key), storageKey);
+  expect(saved).toContain('Synthetic Alex'); expect(saved).not.toContain('PRIVATE_RAW_CV_MARKER');
+  await page.reload();
+  await expect(page.locator('#name')).toHaveValue('');
+  await page.getByRole('button', { name: 'Load saved profile', exact: true }).click();
+  await expect(page.locator('#name')).toHaveValue('Synthetic Alex');
+  await expect(page.locator('#cv-text')).toHaveValue('');
+  await page.getByRole('button', { name: 'Clear my information', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear everything in this app', exact: true }).click();
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
+  await expect(page.locator('#name')).toHaveValue('');
+  expect(requests.every(request => request.url.startsWith('http://127.0.0.1:8771/') && request.method === 'GET' && !request.body)).toBeTruthy();
+  expect(requests.some(request => request.url.includes('PRIVATE_RAW_CV_MARKER'))).toBeFalsy();
+});
+
+test('PDF reader extracts a synthetic CV without external requests', async ({ page, browser }) => {
+  const generator = await browser.newPage();
+  await generator.setContent('<html><body><h1>Synthetic CV</h1><p>Customer service team leader. Excel reporting and scheduling. Led a team of nine.</p></body></html>');
+  const pdf = await generator.pdf(); await generator.close();
+  const requests = []; page.on('request', request => requests.push(request.url()));
+  await page.goto('/');
+  await page.locator('#cv-file').setInputFiles({ name: 'synthetic-cv.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await expect(page.locator('#cv-status')).toContainText('Read synthetic-cv.pdf', { timeout: 15000 });
+  await expect(page.locator('#cv-text')).toHaveValue(/Customer service team leader/);
+  expect(requests.every(url => url.startsWith('http://127.0.0.1:8771/'))).toBeTruthy();
+});
+
+test('DOCX reader extracts plain text and error cases have a usable fallback', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#cv-file').setInputFiles(fileURLToPath(new URL('../fixtures/synthetic-cv.docx', import.meta.url)));
+  await expect(page.locator('#cv-status')).toContainText('Read synthetic-cv.docx');
+  await expect(page.locator('#cv-text')).toHaveValue(/Synthetic candidate/);
+  await page.locator('#cv-file').setInputFiles({ name: 'old-cv.doc', mimeType: 'application/msword', buffer: Buffer.from('Synthetic older document') });
+  await expect(page.locator('#cv-status')).toContainText('exported as DOCX');
+  await page.locator('#cv-file').setInputFiles({ name: 'too-large.txt', mimeType: 'text/plain', buffer: Buffer.alloc(5 * 1024 * 1024 + 1, 'a') });
+  await expect(page.locator('#cv-status')).toContainText('smaller than 5 MB');
+  await expect(page.locator('#cv-text')).toBeEnabled();
+});
+
+test('pasted content is text, unsafe links and inconsistent salary are rejected', async ({ page }) => {
+  await page.goto('/'); await completeProfile(page); await fillVacancy(page);
+  await page.locator('#job-employer').fill('<img src=x onerror="window.xssExecuted=true">');
+  await page.locator('#job-url').fill('javascript:alert(1)');
+  await page.getByRole('button', { name: 'Save and compare' }).click();
+  await expect(page.locator('#job-error')).toContainText('HTTPS');
+  await page.locator('#job-url').fill('https://example.com/jobs/synthetic');
+  await page.locator('#job-min').fill('50000');
+  await page.getByRole('button', { name: 'Save and compare' }).click();
+  await expect(page.locator('#job-error')).toContainText('lower salary');
+  await page.locator('#job-min').fill('40000');
+  await page.locator('#job-essentials').selectOption('unknown');
+  await page.getByRole('button', { name: 'Save and compare' }).click();
+  await expect(page.locator('.job-card .badge')).toHaveText('Investigate');
+  await expect(page.locator('.job-card img')).toHaveCount(0);
+  expect(await page.evaluate(() => window.xssExecuted)).toBeUndefined();
+});
+
+test('mobile journey has no overflow and can complete without a CV', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await completeProfile(page); await fillVacancy(page);
+  expect(await page.locator('#job-dialog').evaluate(dialog => dialog.scrollWidth <= dialog.clientWidth)).toBeTruthy();
+  await page.getByRole('button', { name: 'Save and compare' }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await expect(page.locator('.job-card')).toHaveCount(1);
+});
+
+test('project-subdirectory hosting resolves locally bundled scripts and CV readers', async ({ page }) => {
+  await page.route('**/Ai-Jobs/**', route => route.continue({ url: route.request().url().replace('/Ai-Jobs/', '/') }));
+  await page.goto('/Ai-Jobs/');
+  await page.locator('#cv-file').setInputFiles(fileURLToPath(new URL('../fixtures/synthetic-cv.docx', import.meta.url)));
+  await expect(page.locator('#cv-text')).toHaveValue(/Synthetic candidate/);
+  await completeProfile(page);
+  await expect(page.locator('#vacancies-title')).toBeVisible();
+});
