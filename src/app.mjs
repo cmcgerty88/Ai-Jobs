@@ -1,4 +1,6 @@
-import { blankState, cleanProfile, cleanJob, STORAGE_KEY, serialiseState, restoreState, safeJobUrl, findSkillMentions } from './model.mjs';
+import { blankState, cleanProfile, cleanJob, safeJobUrl, findSkillMentions } from './model.mjs';
+import { initWorkspace } from './workspace.mjs';
+import { diagnose, STAGES, GOALS, cleanProgress, progressError } from './progress.mjs';
 import { assessJob } from './matching.mjs';
 import { readCv } from './cv.mjs';
 import { ROLE_CATALOGUE, exploreRoles, matchRole, roleById, prepareSearchTerms } from './roles.mjs';
@@ -6,8 +8,8 @@ import { ROLE_CATALOGUE, exploreRoles, matchRole, roleById, prepareSearchTerms }
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
-let currentStep = 1, fileGeneration = 0, pendingRemoval = null, savedSnapshot = null;
-let hasSavedCopy = false;
+let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
+let workspace;
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
 
 function announce(text) { $('announcement').textContent = ''; requestAnimationFrame(() => { $('announcement').textContent = text; }); }
@@ -18,15 +20,7 @@ function fillProfile() {
   for (const [name, value] of Object.entries(state.profile)) { const input = $(name); if (input) input.value = value; }
   $('profile-confirmed').checked = false;
 }
-function setSaveStatus() {
-  if (savedSnapshot === serialiseState(state)) {
-    $('save-heading').textContent = 'Your profile, directions and vacancies are saved on this device.';
-    $('save-status').textContent = 'The original CV and CV-text box are not saved. Save again after making changes.';
-  } else {
-    $('save-heading').textContent = 'Your latest work is in this tab.';
-    $('save-status').textContent = hasSavedCopy ? 'Changes have not been saved. Your previously saved copy is unchanged.' : 'Closing or refreshing the page will clear unsaved information.';
-  }
-}
+function setSaveStatus() { workspace?.changed(); }
 function profileChanged(event) {
   if (event?.target !== $('profile-confirmed')) $('profile-confirmed').checked = false;
   syncProfile(); setSaveStatus();
@@ -41,8 +35,10 @@ function showStep(step, focus = true) {
   document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === step) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
   if (step === 3) renderDirections();
   if (step === 4) renderResults();
+  if (step === 5) renderDashboard();
+  $('dashboard-link').hidden = step !== 4;
   if (focus) {
-    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title' }[step]);
+    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
@@ -120,7 +116,7 @@ function renderDirections() {
       if (!already && state.roleDirections.length >= 5) { $('direction-feedback').textContent = 'You have saved five directions. Remove one before adding another.'; announce('Five directions already saved. Remove one to make room.'); return; }
       state.roleDirections = already ? state.roleDirections.filter(id => id !== role.id) : [...state.roleDirections, role.id];
       save.textContent = already ? 'Save this direction' : 'Saved direction'; save.setAttribute('aria-pressed', String(!already));
-      $('direction-feedback').textContent = already ? 'Direction removed from this tab.' : 'Direction saved in this tab. Save on this device below to keep it after refreshing.';
+      $('direction-feedback').textContent = already ? 'Direction removed from this tab.' : 'Direction added. An unlocked encrypted workspace saves this automatically.';
       renderSavedDirections(); setSaveStatus();
       if (filter === 'saved' && already) { renderDirections(); $('role-view').focus(); }
     });
@@ -147,6 +143,7 @@ function showSkillSuggestions() {
     container.append(button);
   }
 }
+$('clear-cv').addEventListener('click', () => { fileGeneration++; $('cv-text').value = ''; $('cv-file').value = ''; $('cv-text').disabled = false; $('cv-file').disabled = false; $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; $('cv-status').textContent = 'Raw CV cleared. Your reviewed profile is unchanged.'; });
 $('find-skills').addEventListener('click', showSkillSuggestions);
 $('cv-text').addEventListener('input', () => { $('skill-suggestions').hidden = true; $('cv-status').textContent = 'CV text is held only in this tab. Review it and add relevant examples to your profile.'; });
 $('use-selection').addEventListener('click', () => {
@@ -194,7 +191,7 @@ jobForm.addEventListener('submit', event => {
   if (data.url.trim() && !safeJobUrl(data.url)) { $('job-error').textContent = 'Use a valid HTTPS vacancy link without a username or password in the address.'; $('job-url').focus(); return; }
   if (data.salaryMin !== '' && data.salaryMax !== '' && Number(data.salaryMin) > Number(data.salaryMax)) { $('job-error').textContent = 'The lower salary must not exceed the upper salary.'; $('job-min').focus(); return; }
   const existing = state.jobs.find(job => job.id === data.id);
-  const job = cleanJob({ ...data, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
+  const job = cleanJob({ ...data, progress: existing?.progress, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
   if (existing) state.jobs[state.jobs.indexOf(existing)] = job; else state.jobs.push(job);
   $('job-dialog').close(); renderResults(); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
 });
@@ -272,50 +269,65 @@ function renderPlan() {
 }
 $('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
 
-document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
-for (const id of ['privacy-open', 'privacy-footer']) $(id).addEventListener('click', () => $('privacy-dialog').showModal());
-$('save-open').addEventListener('click', () => { syncProfile(); $('save-consent').checked = false; $('save-error').textContent = ''; $('save-dialog').showModal(); });
-$('save-confirm').addEventListener('click', () => {
-  if (!$('save-consent').checked) { $('save-error').textContent = 'Please confirm that you want to store your information on this device.'; return; }
-  syncProfile();
-  try { const json = serialiseState(state); localStorage.setItem(STORAGE_KEY, json); savedSnapshot = json; hasSavedCopy = true; $('restore-panel').hidden = true; $('save-dialog').close(); setSaveStatus(); announce('Your profile, directions and vacancies were saved on this device. The raw CV was not saved.'); }
-  catch { $('save-error').textContent = 'Your browser did not allow local saving. Your current information is still in this tab. You can download your profile instead.'; }
+function renderDashboard() {
+  syncProfile(); const report = diagnose(state);
+  $('dashboard-goal').textContent = GOALS[state.profile.goal];
+  $('dashboard-expectation').textContent = state.profile.expectedOutcome || 'Add what useful progress would look like in your profile.';
+  $('dashboard-stats').replaceChildren(...[['Applications', report.applications], ['Reached interview', report.interviews], ['Awaiting reply', report.waiting], ['Current offers', report.offers]].map(([label, value]) => {
+    const item = node('div', undefined, 'stat'); item.append(node('strong', String(value)), node('span', label)); return item;
+  }));
+  $('recommendation').textContent = report.recommendation;
+  $('observations').replaceChildren(...report.observations.map(value => node('li', value)));
+  $('diagnosis-caveat').textContent = report.caveat;
+  $('activity').replaceChildren(...report.weeks.map(week => node('p', `${week.label}: ${week.applications} applications`)));
+  const list = $('application-list'); list.replaceChildren();
+  if (!state.jobs.length) list.append(node('p', 'Add a vacancy in Compare vacancies to start tracking. Your dashboard will grow as you record outcomes.', 'empty-state'));
+  for (const job of state.jobs) {
+    const p = cleanProgress(job.progress), card = node('article', undefined, 'card'); card.append(node('h3', job.title), node('p', job.employer, 'small muted'));
+    const form = node('form', undefined, 'tracker-form'); form.autocomplete = 'off'; const fields = node('div', undefined, 'field-grid');
+    const add = (name, label, type, value) => {
+      const wrapper = node('div'), id = `track-${job.id}-${name}`, lab = node('label', label); lab.htmlFor = id;
+      const input = node(type === 'select' ? 'select' : 'input'); input.id = id; input.name = name;
+      if (type === 'select') for (const [key, text] of Object.entries(STAGES)) { const option = node('option', text); option.value = key; input.append(option); }
+      else { input.type = type; if (type === 'text') { input.maxLength = 300; input.spellcheck = false; } if (type === 'date' && name !== 'nextAt') input.max = new Date().toISOString().slice(0, 10); }
+      input.value = value; wrapper.append(lab, input); fields.append(wrapper);
+    };
+    add('stage', 'Current application stage', 'select', p.stage);
+    add('appliedAt', 'Date you applied', 'date', p.appliedAt);
+    add('interviewAt', 'First completed interview date', 'date', p.interviewAt);
+    add('nextAt', 'Next action date (optional)', 'date', p.nextAt);
+    add('nextAction', 'Your next action (optional)', 'text', p.nextAction);
+    const message = node('p', '', 'error-text'); message.setAttribute('role', 'alert');
+    const save = node('button', 'Update outcome', 'secondary'); save.type = 'submit';
+    form.append(fields, message, save);
+    form.addEventListener('submit', event => {
+      event.preventDefault(); const update = cleanProgress({ ...Object.fromEntries(new FormData(form)), updatedAt: new Date().toISOString().slice(0, 10) });
+      const error = progressError(update); if (error) { message.textContent = error; return; }
+      job.progress = update; renderDashboard(); setSaveStatus(); announce('Application outcome updated. Your recommendation now uses this record.');
+    });
+    if (p.updatedAt) card.append(node('p', `Last updated ${p.updatedAt}. Edit the fields to correct an entry.`, 'hint'));
+    if (p.nextAt && p.nextAt <= new Date().toISOString().slice(0, 10) && !['rejected', 'withdrawn', 'offer'].includes(p.stage)) card.append(node('p', `Next action due: ${p.nextAction || 'Review this application'} (${p.nextAt})`, 'next-action'));
+    card.append(form); list.append(card);
+  }
+  $('pilot-useful').value = state.feedback?.useful || ''; $('pilot-return').value = state.feedback?.return || '';
+}
+for (const id of ['pilot-useful', 'pilot-return']) $(id).addEventListener('change', () => {
+  state.feedback = { useful: $('pilot-useful').value, return: $('pilot-return').value }; $('feedback-preview').hidden = true; setSaveStatus();
 });
-$('load-saved').addEventListener('click', () => {
-  try {
-    state = restoreState(localStorage.getItem(STORAGE_KEY)); savedSnapshot = serialiseState(state); hasSavedCopy = true; fillProfile(); $('restore-panel').hidden = true; showStep(1); setSaveStatus(); announce('Saved profile loaded. Please review and confirm your experience before continuing.');
-  } catch { $('restore-panel').querySelector('p').textContent = 'The saved data could not be read. You can delete that saved copy and start again.'; }
-});
-$('delete-saved').addEventListener('click', () => {
-  if (!window.confirm('Delete the saved copy from this browser? Your current unsaved inputs will stay in this tab.')) return;
-  try { localStorage.removeItem(STORAGE_KEY); hasSavedCopy = false; savedSnapshot = null; $('restore-panel').hidden = true; setSaveStatus(); announce('Saved copy deleted. Current inputs are unchanged.'); }
-  catch { announce('The saved copy could not be deleted. Check your browser storage settings.'); }
-});
-$('clear-open').addEventListener('click', () => $('clear-dialog').showModal());
-$('clear-confirm').addEventListener('click', () => {
-  fileGeneration++;
-  let storageCleared = true;
-  try { localStorage.removeItem(STORAGE_KEY); } catch { storageCleared = false; }
-  state = blankState(); savedSnapshot = null; hasSavedCopy = !storageCleared;
-  profileForm.reset(); preferencesForm.reset(); jobForm.reset(); fillProfile();
-  $('cv-text').value = ''; $('cv-file').value = ''; $('cv-text').disabled = false; $('cv-file').disabled = false;
-  $('cv-status').textContent = 'Or paste your CV text below.'; $('cv-status').classList.remove('error-text');
-  $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; $('restore-panel').hidden = storageCleared;
-  $('summary-name').textContent = 'Your profile'; $('summary-role').textContent = ''; $('summary-evidence').textContent = '';
-  $('summary-preferences').replaceChildren(); $('job-list').replaceChildren(); $('action-list').replaceChildren(); $('results-count').textContent = '';
-  $('role-list').replaceChildren(); $('saved-directions').replaceChildren(); $('direction-evidence').textContent = ''; $('direction-feedback').textContent = ''; $('direction-count').textContent = ''; $('role-view').value = 'suggested'; $('role-search').value = '';
-  $('job-error').textContent = ''; $('remove-description').textContent = ''; pendingRemoval = null;
-  $('clear-dialog').close(); showStep(1); setSaveStatus();
-  if (!storageCleared) { $('save-status').textContent = 'Current inputs were cleared, but saved storage could not be deleted. Remove this site’s data in your browser settings.'; }
-  announce(storageCleared ? 'Your information and saved copy have been cleared from this app.' : 'Current inputs cleared. Check browser storage settings to delete any saved copy.');
-});
-$('export-profile').addEventListener('click', () => {
-  syncProfile();
-  const blob = new Blob([serialiseState(state)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob); const link = node('a'); link.href = url; link.download = 'rolebridge-private-profile.json'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  announce('Your private profile download has started. Keep it somewhere safe; it contains your personal information.');
+$('preview-feedback').addEventListener('click', () => {
+  const report = diagnose(state);
+  $('feedback-preview').textContent = `RoleBridge private pilot — voluntary summary\nVacancies compared: ${state.jobs.length}\nApplications recorded: ${report.applications}\nReached interview: ${report.interviews}\nUseful next action: ${state.feedback?.useful || 'Not answered'}\nWould use again: ${state.feedback?.return || 'Not answered'}\nNo name, CV, profile, employer, job title, dates or free-text notes included.\nSmall-sample counts can still be identifying in context. Share only if comfortable.`;
+  $('feedback-preview').hidden = false;
 });
 
-try { hasSavedCopy = Boolean(localStorage.getItem(STORAGE_KEY)); $('restore-panel').hidden = !hasSavedCopy; } catch { /* The app remains usable without persistent storage. */ }
+document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
+for (const id of ['privacy-open', 'privacy-footer']) $(id).addEventListener('click', () => $('privacy-dialog').showModal());
+// Reset browser-restored controls before opening any private workspace.
+profileForm.reset(); preferencesForm.reset(); jobForm.reset();
+$('cv-text').value = ''; $('cv-file').value = '';
+workspace = initWorkspace({
+  getState: () => { syncProfile(); return state; },
+  setState: value => { state = value; fillProfile(); },
+  start: () => { showStep(1); }, announce
+});
 fillProfile(); showStep(1, false);
-// Never auto-save. No service worker, analytics or external requests are used.

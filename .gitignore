@@ -6,3 +6,7 @@ playwright-report/
 !.env.example
 .DS_Store
 private/
+
+# Candidate backups must never enter the public repository.
+rolebridge-private-profile*.json
+rolebridge-encrypted-backup*.json

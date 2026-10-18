@@ -24,23 +24,25 @@ export async function readCv(file) {
     const arrayBuffer = await file.arrayBuffer();
     checkDocxArchive(arrayBuffer);
     const { unzipSync, strFromU8 } = await import('../vendor/fflate/browser.mjs');
-    const archive = unzipSync(new Uint8Array(arrayBuffer), { filter: entry => entry.name === 'word/document.xml' });
+    const archive = unzipSync(new Uint8Array(arrayBuffer), { filter: entry => { if (entry.name !== 'word/document.xml') return false; if (entry.originalSize > 2 * 1024 * 1024) throw new Error('The document text is too large. Please paste the relevant text.'); return true; } });
     if (!archive['word/document.xml']) throw new Error('This file does not contain a readable Word document. Please paste the CV text instead.');
     const xml = strFromU8(archive['word/document.xml']);
-    if (xml.length > 25 * 1024 * 1024 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('This Word document uses unsupported content. Please paste the CV text instead.');
+    if (xml.length > 2 * 1024 * 1024 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('This Word document uses unsupported content. Please paste the CV text instead.');
     const document = new DOMParser().parseFromString(xml, 'application/xml');
     if (document.querySelector('parsererror') || document.documentElement.localName !== 'document') throw new Error('The Word document text is damaged or unsupported. Please paste the text instead.');
     const parts = [];
-    function visit(element) {
-      if (element.nodeType !== 1 || element.localName === 'del' || element.localName === 'instrText') return;
-      if (element.localName === 't') { parts.push(element.textContent); return; }
-      if (element.localName === 'tab') { parts.push('\t'); return; }
-      if (['br', 'cr'].includes(element.localName)) { parts.push('\n'); return; }
-      for (const child of element.children) visit(child);
-      if (element.localName === 'p' || element.localName === 'tr') parts.push('\n');
-      if (element.localName === 'tc') parts.push('\t');
+    const stack = [{ element: document.documentElement, depth: 0 }];
+    while (stack.length) {
+      const { element, depth, end } = stack.pop();
+      if (end) { parts.push(end); continue; }
+      if (depth > 128) throw new Error('This document is too complex. Please paste the relevant text.');
+      if (element.nodeType !== 1 || element.localName === 'del' || element.localName === 'instrText') continue;
+      if (element.localName === 't') { parts.push(element.textContent); continue; }
+      if (element.localName === 'tab') { parts.push('\t'); continue; }
+      if (['br', 'cr'].includes(element.localName)) { parts.push('\n'); continue; }
+      if (['p', 'tr', 'tc'].includes(element.localName)) stack.push({ end: element.localName === 'tc' ? '\t' : '\n' });
+      for (let i = element.children.length - 1; i >= 0; i--) stack.push({ element: element.children[i], depth: depth + 1 });
     }
-    visit(document.documentElement);
     value = parts.join('');
   } else if (extension === 'pdf') {
     const pdfjs = await import('../vendor/pdfjs/pdf.mjs');

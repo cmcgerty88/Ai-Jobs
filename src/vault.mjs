@@ -1,0 +1,34 @@
+// Device-only encryption. No server identity, password recovery or shared secret.
+export const VAULT_KEY = 'rolebridge.encrypted-workspace.v1';
+export const RETENTION_MS = 30 * 86400000;
+const ITERATIONS = 600000;
+const encoder = new TextEncoder();
+const b64 = bytes => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
+const bytes = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+const header = v => encoder.encode(JSON.stringify([v.version, v.iterations, v.salt, v.expiresAt]));
+export function parseVault(raw) {
+  if (typeof raw !== 'string' || raw.length > 1600000) throw new Error('Invalid workspace.');
+  const v = JSON.parse(raw);
+  if (!v || v.version !== 1 || v.iterations !== ITERATIONS || !Number.isSafeInteger(v.expiresAt) || v.expiresAt <= 0 ||
+      typeof v.salt !== 'string' || typeof v.iv !== 'string' || typeof v.data !== 'string' || bytes(v.salt).length !== 16 || bytes(v.iv).length !== 12 || bytes(v.data).length < 16) throw new Error('Invalid workspace.');
+  return v;
+}
+export async function newKey(passphrase, salt = crypto.getRandomValues(new Uint8Array(16))) {
+  if (typeof passphrase !== 'string' || passphrase.length < 14 || passphrase.length > 256) throw new Error('Use a passphrase of 14–256 characters, ideally several unrelated words.');
+  const material = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITERATIONS }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return { key, salt: b64(salt) };
+}
+export async function seal(json, session, now = Date.now()) {
+  if (typeof json !== 'string' || json.length > 900000) throw new Error('Workspace is too large.');
+  const v = { version: 1, iterations: ITERATIONS, salt: session.salt, expiresAt: now + RETENTION_MS, iv: b64(crypto.getRandomValues(new Uint8Array(12))) };
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: bytes(v.iv), additionalData: header(v) }, session.key, encoder.encode(json));
+  return JSON.stringify({ ...v, data: b64(new Uint8Array(data)) });
+}
+export async function unseal(raw, passphrase, now = Date.now()) {
+  const v = parseVault(raw);
+  if (v.expiresAt <= now) throw new Error('This workspace has expired.');
+  const session = await newKey(passphrase, bytes(v.salt));
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(v.iv), additionalData: header(v) }, session.key, bytes(v.data));
+  return { session, json: new TextDecoder('utf-8', { fatal: true }).decode(plain) };
+}

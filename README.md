@@ -1,6 +1,6 @@
 # RoleBridge
 
-A first working tool for people exploring their next role after redundancy. Read a CV privately, review an experience profile, explore role directions from a local library, and compare real vacancies against your requirements.
+A private device-only pilot for people exploring their next role after redundancy. The existing CV reader, role explorer and vacancy analysis now connect to an encrypted workspace and an application-outcome dashboard. OpenAI remains disconnected.
 
 ## Try it
 
@@ -8,12 +8,15 @@ With GitHub Pages configured for `main` → `/ (root)`, the app is served at:
 
 https://cmcgerty88.github.io/Ai-Jobs/
 
-1. Choose a PDF, DOCX or TXT CV, or type your experience manually.
+1. Create a private workspace with a strong passphrase (no email/server account), or try without saving. Then choose a PDF, DOCX or TXT CV, or type your experience manually.
 2. Review the CV text, select relevant passages, and add accurate examples and skills to your profile. Skill suggestions are literal text matches, not AI assessments.
 3. Confirm the profile and enter your work preferences.
 4. Open **Explore directions** to see role titles connected to your confirmed skills. Check the explanations, browse the whole library, and save up to five directions. Copy search phrases if useful; no search happens automatically.
 5. Find a real vacancy on an employer's site. Add its link, description and stated conditions. Leave missing information unknown.
 6. Review the reasons to consider, investigate or skip it. Choose next actions for your plan.
+7. Continue to the dashboard. Record application dates, outcomes and next actions; review the recommendation and its limitations. Return in the same browser to update your progress.
+
+Follow the [private pilot guide](docs/PRIVATE-PILOT.md) to test this with real users. Read the [privacy/security review and hosted-account gates](docs/PRIVACY-SECURITY-REVIEW.md) before collecting research data or adding external processing.
 
 The original [fictional demo](research/rolebridge-demo.html), [sample PDF](research/rolebridge-sample.pdf), [provisional opportunity report](research/REEMPLOYMENT-OPPORTUNITY-REPORT.md) and [validation kit](research/VALIDATION-KIT.md) remain available.
 
@@ -25,10 +28,12 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - Saved role directions and next actions, with optional device saving. Previously saved profiles remain compatible.
 - UK/Republic of Ireland work preferences, explicit currency and gross annual pay, working pattern, hours and sponsorship constraints.
 - Real-vacancy entry, conservative constraint checks, source-check dates and user-controlled essential-requirement confirmation.
-- An action list, explicit opt-in local saving, private JSON download, and deletion controls.
+- Encrypted opt-in autosaving, passphrase unlock, inactivity lock, encrypted backup/restore, 30-day expiry and deletion controls.
+- User goals, application dates/stages, completed interviews, follow-up actions, weekly counts and cautious rule-based recommendations.
+- Optional local usefulness feedback with a minimised preview; nothing sent automatically.
 - Responsive layout and keyboard-accessible forms/dialogs.
 
-There is no automatic job search, external AI analysis, email delivery, account, cloud database or automatic application sending. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
+There is no automatic job search, external AI analysis, email delivery, hosted account, cloud database or automatic application sending. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
 
 OpenAI integration is deliberately deferred. This release needs no API key, billing setup, server or additional hosting. The existing GitHub Pages deployment serves the role catalogue and matching logic locally.
 
@@ -40,7 +45,7 @@ A suggested direction requires at least two distinct matching skill groups, incl
 
 Missing matches are areas to check, not a conclusion that the person lacks those skills. Roles can always be browsed and saved for exploration without matching. Actual job requirements, pay, work location, qualifications and eligibility must be checked against individual vacancies. Search phrases incorporate selected location/country and work pattern but are only plain text; the user decides whether to copy them into a search service.
 
-The local storage schema remains version 1, with an optional `roleDirections` array. Older profiles without it load with no saved directions. Saving, downloading and clearing now include those selections. Raw CV text is still excluded.
+The reviewed-data schema remains version 1 with optional role directions, profile goals, per-job progress and categorical feedback. Older plaintext profiles can be explicitly migrated to a separate encrypted storage envelope; successful migration removes the plaintext key. Raw CV text is excluded.
 
 CV-reading limits: 5 MB per file, 30 PDF pages and 100,000 extracted characters. Scanned PDFs need pasted text or a text-based export; OCR and password entry are not provided. DOCX extraction reads the main document text, including ordinary tables; separate headers, footers and footnotes are not included. Review the extracted text before using it.
 
@@ -48,9 +53,11 @@ CV-reading limits: 5 MB per file, 30 PDF pages and 100,000 extracted characters.
 
 The CV readers are bundled and served from this repository; no CDN is used. CV files and their text are processed in the browser and are not uploaded. No app analytics or external API calls are made. GitHub Pages still receives ordinary hosting requests, and employer links open external websites when selected.
 
-Profile, selected role directions and vacancy data are held in memory unless the person explicitly selects **Save on this device** and confirms. This writes the reviewed profile, role IDs and vacancy records to `localStorage`, not the original CV or CV-text box. Local storage is not encrypted or password-protected by this app; use a trusted device/browser profile. Saved data is not automatically loaded into visible fields.
+**Create private workspace** is local signup, not a verified online account. Explicit consent enables encrypted autosaving in browser localStorage. Web Crypto uses AES-256-GCM and PBKDF2-SHA-256 (600,000 iterations) with a random salt and fresh IV per save. The passphrase and key are never persisted by the app. No recovery/reset or cloud sync is provided. Use a current browser over HTTPS and a trusted personal device. Try without saving holds information in the tab only.
 
-**Clear my information** removes app-managed local storage and resets current inputs. The app cannot remove downloaded exports, browser/device backups or copies outside it. There is no backend account to recover a lost profile. Do not put any real CV, personal data, API key or candidate export in this repository or GitHub issues. `tests/fixtures/synthetic-cv.docx` is entirely fictional.
+**Lock workspace** and ten minutes without activity clear the unlocked page, including raw CV text. Application updates and vacancy edits must be submitted to become saved records. Profile changes autosave after a short debounce; the status shows success/failure. Automatic lock attempts to save first but discards unsaved edits if storage fails. Expiry is 30 days after the last save, enforced by deletion on the next visit; no website can delete local storage while closed. Encrypted backups also expire and need the passphrase to restore. Remove unwanted downloads/backups separately.
+
+**Clear my information** removes both saved formats and resets current inputs. Encryption does not protect against compromised devices, malicious extensions/site code or someone using an unlocked workspace. GitHub Pages repositories share an origin; a dedicated origin is required before wider service deployment. See the review for threat boundaries, UK/EU GDPR considerations and future authentication/database requirements. Do not put real CVs, candidate exports or secrets in this repository or issues. All fixtures are fictional.
 
 ## Develop and verify
 
