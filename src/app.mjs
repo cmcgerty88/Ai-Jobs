@@ -1,6 +1,7 @@
 import { blankState, cleanProfile, cleanJob, STORAGE_KEY, serialiseState, restoreState, safeJobUrl, findSkillMentions } from './model.mjs';
 import { assessJob } from './matching.mjs';
 import { readCv } from './cv.mjs';
+import { ROLE_CATALOGUE, exploreRoles, matchRole, roleById, prepareSearchTerms } from './roles.mjs';
 
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
@@ -19,7 +20,7 @@ function fillProfile() {
 }
 function setSaveStatus() {
   if (savedSnapshot === serialiseState(state)) {
-    $('save-heading').textContent = 'Your profile and vacancies are saved on this device.';
+    $('save-heading').textContent = 'Your profile, directions and vacancies are saved on this device.';
     $('save-status').textContent = 'The original CV and CV-text box are not saved. Save again after making changes.';
   } else {
     $('save-heading').textContent = 'Your latest work is in this tab.';
@@ -38,9 +39,10 @@ function showStep(step, focus = true) {
   currentStep = step;
   document.querySelectorAll('.step-panel').forEach(section => { section.hidden = section.id !== `step-${step}`; });
   document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === step) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
-  if (step === 3) renderResults();
+  if (step === 3) renderDirections();
+  if (step === 4) renderResults();
   if (focus) {
-    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'vacancies-title' }[step]);
+    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
@@ -54,6 +56,79 @@ document.querySelectorAll('[data-step]').forEach(button => button.addEventListen
 document.querySelectorAll('[data-back]').forEach(button => button.addEventListener('click', () => navigate(Number(button.dataset.back))));
 profileForm.addEventListener('submit', event => { event.preventDefault(); navigate(2); });
 preferencesForm.addEventListener('submit', event => { event.preventDefault(); navigate(3); });
+
+function renderSavedDirections() {
+  const list = $('saved-directions'); list.replaceChildren();
+  const chosen = state.roleDirections.map(roleById).filter(Boolean);
+  if (!chosen.length) { list.append(node('li', 'No directions saved yet.', 'muted small')); return; }
+  for (const role of chosen) {
+    const item = node('li'); item.append(node('strong', role.title));
+    if (!matchRole(state.profile, role).relevant) item.append(node('p', 'Saved to explore; not currently connected by the library’s skill rules.', 'hint'));
+    const remove = node('button', 'Remove', 'text-button'); remove.type = 'button'; remove.setAttribute('aria-label', `Remove saved direction ${role.title}`);
+    remove.addEventListener('click', () => { state.roleDirections = state.roleDirections.filter(id => id !== role.id); renderDirections(); setSaveStatus(); $('role-view').focus(); });
+    item.append(remove); list.append(item);
+  }
+}
+function renderDirections() {
+  syncProfile();
+  state.roleDirections = state.roleDirections.filter(id => roleById(id));
+  $('direction-evidence').textContent = state.profile.evidence;
+  renderSavedDirections();
+  const filter = $('role-view').value, query = $('role-search').value.trim().toLowerCase();
+  let results = filter === 'suggested' ? exploreRoles(state.profile) : ROLE_CATALOGUE.filter(role => filter !== 'saved' || state.roleDirections.includes(role.id)).map(role => matchRole(state.profile, role));
+  results = results.filter(({ role }) => `${role.title} ${role.category} ${role.terms.join(' ')}`.toLowerCase().includes(query));
+  $('direction-count').textContent = `${results.length} ${results.length === 1 ? 'direction' : 'directions'} shown · ${ROLE_CATALOGUE.length} in this limited library. Salary, location and eligibility must be checked on actual vacancies.`;
+  const list = $('role-list'); list.replaceChildren();
+  if (!results.length) {
+    const empty = node('div', undefined, 'empty-state');
+    empty.append(node('h3', query ? 'No directions match this filter.' : filter === 'saved' ? 'Your exploration list is empty.' : 'No directions connected by these skill rules yet.'));
+    empty.append(node('p', 'This says nothing about your employability. The library is small and recognises specific skill labels. You can review your confirmed skills or browse all directions.'));
+    const browse = node('button', 'Browse all directions', 'secondary'); browse.type = 'button'; browse.addEventListener('click', () => { $('role-view').value = 'all'; $('role-search').value = ''; renderDirections(); $('role-view').focus(); }); empty.append(browse); list.append(empty);
+  }
+  for (const result of results) {
+    const { role, matches } = result;
+    const card = node('article', undefined, 'role-card'); card.dataset.roleId = role.id;
+    const header = node('div', undefined, 'job-header');
+    const title = node('div'); title.append(node('p', role.category, 'eyebrow'), node('h3', role.title));
+    header.append(title, node('span', result.relevant ? 'Skill connections' : 'Browse to explore', 'badge ' + (result.relevant ? 'consider' : 'investigate'))); card.append(header, node('p', role.description, 'muted small'));
+    if (matches.length) {
+      card.append(node('h4', 'Connections to skills you confirmed'));
+      const connections = node('ul', undefined, 'role-connections');
+      for (const match of matches) { const item = node('li'); item.append(node('strong', match.supplied), document.createTextNode(' ' + match.connection + '.')); connections.append(item); }
+      card.append(connections);
+    } else card.append(node('p', 'No confirmed skill labels connect to this entry. You can still explore it; the tool has not assessed whether you are qualified.', 'hint'));
+    const details = node('details'); details.append(node('summary', 'What to check before pursuing this direction'));
+    listSection(details, 'Questions for actual vacancies', role.checks);
+    if (result.prompts.length) details.append(node('p', 'Other areas to look for in adverts: ' + result.prompts.join(', ') + '. These are not recorded as matching labels in your profile; that does not mean you lack them or that every employer requires them.', 'hint'));
+    details.append(node('h4', 'An example you could prepare'), node('p', role.example, 'small'));
+    const terms = prepareSearchTerms(role, state.profile).join('\n');
+    const termsId = `terms-${role.id}`;
+    const label = node('label', 'Search phrases you can use'); label.htmlFor = termsId;
+    const text = node('textarea'); text.id = termsId; text.readOnly = true; text.rows = 3; text.value = terms; text.className = 'search-phrases';
+    const copy = node('button', 'Copy search phrases', 'secondary'); copy.type = 'button';
+    const status = node('p', '', 'hint'); status.setAttribute('role', 'status');
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(terms); status.textContent = 'Copied. Paste into your preferred job site or employer search. Nothing was searched or sent automatically.'; }
+      catch { text.focus(); text.select(); status.textContent = 'Automatic copying is unavailable. The phrases are selected; use your browser’s Copy action.'; }
+    });
+    details.append(label, text, node('p', 'These are search phrases, not links to jobs. No search is run and no information is sent to a job site.', 'hint'), copy, status); card.append(details);
+    const actions = node('div', undefined, 'job-actions');
+    const saved = state.roleDirections.includes(role.id);
+    const save = node('button', saved ? 'Saved direction' : 'Save this direction', 'secondary'); save.type = 'button'; save.setAttribute('aria-pressed', String(saved));
+    save.addEventListener('click', () => {
+      const already = state.roleDirections.includes(role.id);
+      if (!already && state.roleDirections.length >= 5) { $('direction-feedback').textContent = 'You have saved five directions. Remove one before adding another.'; announce('Five directions already saved. Remove one to make room.'); return; }
+      state.roleDirections = already ? state.roleDirections.filter(id => id !== role.id) : [...state.roleDirections, role.id];
+      save.textContent = already ? 'Save this direction' : 'Saved direction'; save.setAttribute('aria-pressed', String(!already));
+      $('direction-feedback').textContent = already ? 'Direction removed from this tab.' : 'Direction saved in this tab. Save on this device below to keep it after refreshing.';
+      renderSavedDirections(); setSaveStatus();
+      if (filter === 'saved' && already) { renderDirections(); $('role-view').focus(); }
+    });
+    actions.append(save); card.append(actions); list.append(card);
+  }
+}
+$('role-view').addEventListener('change', renderDirections);
+$('role-search').addEventListener('input', renderDirections);
 
 function showSkillSuggestions() {
   const mentions = findSkillMentions($('cv-text').value);
@@ -190,7 +265,9 @@ function renderResults() {
 function renderPlan() {
   const plan = $('action-list'); plan.replaceChildren();
   const selected = state.jobs.filter(job => job.selected && assessJob(state.profile, job).status !== 'skip');
-  if (!selected.length) { plan.append(node('li', 'Choose a vacancy to add a practical next step here.')); return; }
+  const directions = state.roleDirections.map(roleById).filter(Boolean);
+  if (!selected.length && !directions.length) { plan.append(node('li', 'Save a role direction or choose a vacancy to add a practical next step here.')); return; }
+  for (const role of directions) { const item = node('li'); item.append(node('strong', 'Explore: ' + role.title), node('small', role.example)); plan.append(item); }
   for (const job of selected) { const item = node('li'); item.append(node('strong', job.title), node('small', assessJob(state.profile, job).nextAction)); plan.append(item); }
 }
 $('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
@@ -201,7 +278,7 @@ $('save-open').addEventListener('click', () => { syncProfile(); $('save-consent'
 $('save-confirm').addEventListener('click', () => {
   if (!$('save-consent').checked) { $('save-error').textContent = 'Please confirm that you want to store your information on this device.'; return; }
   syncProfile();
-  try { const json = serialiseState(state); localStorage.setItem(STORAGE_KEY, json); savedSnapshot = json; hasSavedCopy = true; $('restore-panel').hidden = true; $('save-dialog').close(); setSaveStatus(); announce('Your profile and vacancies were saved on this device. The raw CV was not saved.'); }
+  try { const json = serialiseState(state); localStorage.setItem(STORAGE_KEY, json); savedSnapshot = json; hasSavedCopy = true; $('restore-panel').hidden = true; $('save-dialog').close(); setSaveStatus(); announce('Your profile, directions and vacancies were saved on this device. The raw CV was not saved.'); }
   catch { $('save-error').textContent = 'Your browser did not allow local saving. Your current information is still in this tab. You can download your profile instead.'; }
 });
 $('load-saved').addEventListener('click', () => {
@@ -226,6 +303,7 @@ $('clear-confirm').addEventListener('click', () => {
   $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; $('restore-panel').hidden = storageCleared;
   $('summary-name').textContent = 'Your profile'; $('summary-role').textContent = ''; $('summary-evidence').textContent = '';
   $('summary-preferences').replaceChildren(); $('job-list').replaceChildren(); $('action-list').replaceChildren(); $('results-count').textContent = '';
+  $('role-list').replaceChildren(); $('saved-directions').replaceChildren(); $('direction-evidence').textContent = ''; $('direction-feedback').textContent = ''; $('direction-count').textContent = ''; $('role-view').value = 'suggested'; $('role-search').value = '';
   $('job-error').textContent = ''; $('remove-description').textContent = ''; pendingRemoval = null;
   $('clear-dialog').close(); showStep(1); setSaveStatus();
   if (!storageCleared) { $('save-status').textContent = 'Current inputs were cleared, but saved storage could not be deleted. Remove this site’s data in your browser settings.'; }

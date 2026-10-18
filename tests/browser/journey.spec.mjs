@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 const storageKey = 'rolebridge.private-profile.v1';
-async function completeProfile(page) {
+async function completeProfile(page, { stopAtDirections = false } = {}) {
   await page.locator('#name').fill('Synthetic Alex');
   await page.locator('#currentRole').fill('Customer support team lead');
   await page.locator('#evidence').fill('Led a team of 9. Planned weekly cover and improved customer service reporting.');
@@ -13,7 +13,8 @@ async function completeProfile(page) {
   await page.locator('#workMode').selectOption('hybrid');
   await page.locator('#maxOfficeDays').selectOption('2');
   await page.locator('#sponsorship').selectOption('no');
-  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await page.getByRole('button', { name: 'Explore role directions' }).click();
+  if (!stopAtDirections) await page.getByRole('button', { name: 'Continue to vacancies' }).click();
 }
 async function fillVacancy(page) {
   await page.getByRole('button', { name: 'Add a vacancy', exact: true }).click();
@@ -40,6 +41,7 @@ test('real-input journey, conservative comparison, edits and removal', async ({ 
   await expect(page.locator('#action-list')).toContainText('Synthetic service coordinator');
   await page.getByRole('button', { name: 'Edit work preferences' }).click();
   await page.locator('#workMode').selectOption('remote');
+  await page.getByRole('button', { name: 'Explore role directions' }).click();
   await page.getByRole('button', { name: 'Continue to vacancies' }).click();
   await expect(page.locator('.job-card .badge')).toHaveText('Skip');
   await expect(page.locator('#action-list')).not.toContainText('Synthetic service coordinator');
@@ -136,4 +138,86 @@ test('project-subdirectory hosting resolves locally bundled scripts and CV reade
   await expect(page.locator('#cv-text')).toHaveValue(/Synthetic candidate/);
   await completeProfile(page);
   await expect(page.locator('#vacancies-title')).toBeVisible();
+});
+
+test('local role directions explain skills, prepare searches and never call an AI or job service', async ({ page, context }) => {
+  const requests = [], errors = [];
+  page.on('request', request => requests.push({ url: request.url(), method: request.method() }));
+  page.on('pageerror', error => errors.push(error.message));
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/'); await completeProfile(page, { stopAtDirections: true });
+  await expect(page.locator('#directions-title')).toBeVisible();
+  await expect(page.locator('#step-3')).toContainText('Local library · no AI connection');
+  const card = page.locator('[data-role-id="service-delivery-coordinator"]');
+  await expect(card).toBeVisible();
+  await expect(card.locator('.role-connections')).toContainText('customer service');
+  await expect(card.locator('.role-connections')).toContainText('Excel');
+  await card.getByRole('button', { name: 'Save this direction' }).click();
+  await expect(page.locator('#saved-directions')).toContainText('Service delivery coordinator');
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
+  await card.locator('summary').click();
+  await expect(card).toContainText('not recorded as matching labels');
+  await card.getByRole('button', { name: 'Copy search phrases' }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('service delivery coordinator hybrid UK');
+  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await expect(page.locator('#action-list')).toContainText('Explore: Service delivery coordinator');
+  expect(requests.every(request => request.url.startsWith('http://127.0.0.1:8771/') && request.method === 'GET')).toBeTruthy();
+  expect(errors).toEqual([]);
+});
+
+test('saved directions survive opt-in saving, older profiles still load, and clear removes derived content', async ({ page }) => {
+  await page.goto('/'); await completeProfile(page, { stopAtDirections: true });
+  await page.locator('[data-role-id="service-delivery-coordinator"]').getByRole('button', { name: 'Save this direction' }).click();
+  await page.getByRole('button', { name: 'Save on this device', exact: true }).click();
+  await page.locator('#save-consent').check();
+  await page.getByRole('button', { name: 'Save my information', exact: true }).click();
+  await page.reload(); await page.getByRole('button', { name: 'Load saved profile', exact: true }).click();
+  await page.locator('#profile-confirmed').check();
+  await page.locator('.steps [data-step="3"]').click();
+  await expect(page.locator('#saved-directions')).toContainText('Service delivery coordinator');
+  await page.locator('#role-view').selectOption('saved');
+  await expect(page.locator('.role-card')).toHaveCount(1);
+  // Simulate the previous release's schema without the new optional field.
+  await page.evaluate(key => { const data = JSON.parse(localStorage.getItem(key)); delete data.roleDirections; localStorage.setItem(key, JSON.stringify(data)); }, storageKey);
+  await page.reload(); await page.getByRole('button', { name: 'Load saved profile', exact: true }).click();
+  await expect(page.locator('#name')).toHaveValue('Synthetic Alex');
+  await page.locator('#profile-confirmed').check(); await page.locator('.steps [data-step="3"]').click();
+  await expect(page.locator('#saved-directions')).toContainText('No directions saved');
+  await page.getByRole('button', { name: 'Clear my information', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear everything in this app', exact: true }).click();
+  await expect(page.locator('#role-list')).toBeEmpty();
+  await expect(page.locator('#direction-evidence')).toBeEmpty();
+  expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
+});
+
+test('no-match state remains useful, browsing respects the save limit, and profile changes do not invent evidence', async ({ page }) => {
+  await page.goto('/'); await completeProfile(page, { stopAtDirections: true });
+  await page.getByRole('button', { name: 'Review my confirmed skills' }).click();
+  await page.locator('#skills').fill('I have no SQL, not Excel');
+  await page.locator('#profile-confirmed').check(); await page.locator('.steps [data-step="3"]').click();
+  await expect(page.locator('.role-card')).toHaveCount(0);
+  await expect(page.locator('#role-list')).toContainText('This says nothing about your employability');
+  await page.getByRole('button', { name: 'Browse all directions', exact: true }).click();
+  await expect(page.locator('.role-card')).toHaveCount(12);
+  for (let i = 0; i < 5; i++) await page.locator('.role-card').nth(i).getByRole('button', { name: 'Save this direction' }).click();
+  await page.locator('.role-card').nth(5).getByRole('button', { name: 'Save this direction' }).click();
+  await expect(page.locator('#direction-feedback')).toContainText('saved five directions');
+  await expect(page.locator('#saved-directions > li')).toHaveCount(5);
+  await expect(page.locator('#saved-directions')).toContainText('not currently connected');
+  await page.locator('#role-search').fill('reporting analyst');
+  await expect(page.locator('.role-card')).toHaveCount(1);
+  await page.locator('#role-view').selectOption('saved');
+  await expect(page.locator('.role-card')).toHaveCount(0);
+});
+
+test('mobile directions and unavailable clipboard have an accessible fallback', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Permission denied'); } } }));
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/');
+  await completeProfile(page, { stopAtDirections: true });
+  const card = page.locator('[data-role-id="service-delivery-coordinator"]');
+  await card.locator('summary').click();
+  await card.getByRole('button', { name: 'Copy search phrases' }).click();
+  await expect(card).toContainText('Automatic copying is unavailable');
+  await expect(card.locator('.search-phrases')).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
