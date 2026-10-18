@@ -2,14 +2,14 @@ import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 const storageKey = 'rolebridge.encrypted-workspace.v1';
-const passphrase = 'synthetic-unrelated-words-only';
+const password = 'Synthetic-unrelated-words-only!';
 async function begin(page, url = '/') { await page.goto(url); await page.getByRole('button', { name: 'Try without saving' }).click(); }
 async function saveWorkspace(page) {
-  await page.locator('#save-passphrase').fill(passphrase); await page.locator('#save-passphrase-confirm').fill(passphrase);
+  await page.locator('#save-password').fill(password); await page.locator('#save-password-confirm').fill(password);
   await page.locator('#save-consent').check(); await page.getByRole('button', { name: 'Save my information', exact: true }).click();
   await expect(page.locator('#save-dialog')).not.toBeVisible();
 }
-async function unlock(page) { await page.locator('#passphrase').fill(passphrase); await page.getByRole('button', { name: 'Unlock workspace', exact: true }).click(); await expect(page.locator('#workspace')).toBeVisible(); }
+async function unlock(page) { await page.locator('#password').fill(password); await page.getByRole('button', { name: 'Unlock workspace', exact: true }).click(); await expect(page.locator('#workspace')).toBeVisible(); }
 async function completeProfile(page, { stopAtDirections = false } = {}) {
   await page.locator('#name').fill('Synthetic Alex');
   await page.locator('#currentRole').fill('Customer support team lead');
@@ -74,7 +74,7 @@ test('CV text never leaves the browser and storage requires explicit consent', a
   await saveWorkspace(page);
   const saved = await page.evaluate(key => localStorage.getItem(key), storageKey);
   expect(saved).not.toContain('Synthetic Alex'); expect(saved).not.toContain('PRIVATE_RAW_CV_MARKER');
-  const decrypted = await page.evaluate(async ({ key, passphrase }) => { const { unseal } = await import('/src/vault.mjs'); return (await unseal(localStorage.getItem(key), passphrase)).json; }, { key: storageKey, passphrase });
+  const decrypted = await page.evaluate(async ({ key, password }) => { const { unseal } = await import('/src/vault.mjs'); return (await unseal(localStorage.getItem(key), password)).json; }, { key: storageKey, password });
   expect(decrypted).toContain('Synthetic Alex'); expect(decrypted).not.toContain('PRIVATE_RAW_CV_MARKER');
   await page.reload();
   await expect(page.locator('#name')).toHaveValue('');

@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 const key = 'rolebridge.encrypted-workspace.v1', legacy = 'rolebridge.private-profile.v1';
-const pass = 'synthetic-pilot-passphrase-only';
+const pass = 'Synthetic-pilot-password-only!';
 async function create(page) {
-  await page.goto('/'); await page.locator('#passphrase').fill(pass); await page.locator('#passphrase-confirm').fill(pass);
+  await page.goto('/'); await page.locator('#password').fill(pass); await page.locator('#password-confirm').fill(pass);
   await page.locator('#workspace-consent').check(); await page.locator('#create-workspace').click();
   await expect(page.locator('#workspace')).toBeVisible();
 }
-async function unlock(page, phrase = pass) { await page.locator('#passphrase').fill(phrase); await page.locator('#create-workspace').click(); }
+async function unlock(page, phrase = pass) { await page.locator('#password').fill(phrase); await page.locator('#create-workspace').click(); }
 async function profile(page) {
   await page.locator('#currentRole').fill('Synthetic coordinator');
   await page.locator('#evidence').fill('Synthetic evidence: I coordinated schedules and prepared weekly reporting.');
@@ -51,7 +51,7 @@ test('signup to dashboard remembers goals and corrected outcomes without transmi
   const raw = await page.evaluate(k => localStorage.getItem(k), key);
   expect(raw).not.toContain('Synthetic'); expect(raw).not.toContain(pass);
   await page.reload(); await expect(page.locator('#workspace')).toBeHidden();
-  await unlock(page, 'incorrect-passphrase-only'); await expect(page.locator('#signup-error')).toContainText('Unable to unlock');
+  await unlock(page, 'incorrect-password-only'); await expect(page.locator('#signup-error')).toContainText('Unable to unlock');
   await expect(page.locator('#workspace')).toBeHidden();
   await unlock(page); await expect(page.locator('#workspace')).toBeVisible();
   await expect(page.locator('#expectedOutcome')).toHaveValue('A clear next action for two suitable vacancies');
@@ -70,14 +70,14 @@ test('legacy profile migration commits ciphertext before removing plaintext', as
   await page.goto('/'); await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ version: 1, profile: { name: 'Synthetic legacy', currentRole: 'Synthetic role', evidence: 'Synthetic old reviewed experience' }, jobs: [] })), legacy);
   await page.reload(); await expect(page.locator('#restore-panel')).toContainText('unencrypted');
   await page.locator('#load-saved').click(); await expect(page.locator('#name')).toHaveValue('Synthetic legacy');
-  await page.locator('#save-passphrase').fill(pass); await page.locator('#save-passphrase-confirm').fill(pass); await page.locator('#save-consent').check();
+  await page.locator('#save-password').fill(pass); await page.locator('#save-password-confirm').fill(pass); await page.locator('#save-consent').check();
   await page.locator('#save-confirm').click(); await expect(page.locator('#save-dialog')).toBeHidden();
   expect(await page.evaluate(k => localStorage.getItem(k), legacy)).toBeNull();
   expect(await page.evaluate(k => localStorage.getItem(k), key)).not.toContain('Synthetic legacy');
   await page.reload(); await unlock(page); await expect(page.locator('#name')).toHaveValue('Synthetic legacy');
 });
 
-test('encrypted backup restores only with passphrase; delete clears both formats and all rendered inputs', async ({ page }) => {
+test('encrypted backup restores only with password; delete clears both formats and all rendered inputs', async ({ page }) => {
   await create(page); await profile(page); await job(page); await saved(page);
   const downloaded = page.waitForEvent('download'); await page.locator('#export-profile').click();
   const data = await readFile(await (await downloaded).path());
@@ -122,7 +122,7 @@ test('another tab writing locks the older tab instead of silently overwriting da
 test('blocked storage leaves session usable and saving errors visible without data loss', async ({ page }) => {
   await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('blocked', 'QuotaExceededError'); }; });
   await page.goto('/'); await page.locator('#session-only').click(); await profile(page);
-  await page.locator('#save-open').click(); await page.locator('#save-passphrase').fill(pass); await page.locator('#save-passphrase-confirm').fill(pass); await page.locator('#save-consent').check(); await page.locator('#save-confirm').click();
+  await page.locator('#save-open').click(); await page.locator('#save-password').fill(pass); await page.locator('#save-password-confirm').fill(pass); await page.locator('#save-consent').check(); await page.locator('#save-confirm').click();
   await expect(page.locator('#save-error')).not.toBeEmpty(); await expect(page.locator('#save-dialog')).toBeVisible();
   await page.locator('[data-close="save-dialog"]').click(); await page.locator('.steps [data-step="1"]').click();
   await expect(page.locator('#currentRole')).toHaveValue('Synthetic coordinator');
@@ -137,7 +137,7 @@ test('mobile private signup and dashboard stay within viewport', async ({ page }
 
 test('starting again cannot silently erase a legacy profile', async ({ page }) => {
   await page.goto('/'); await page.evaluate(k => localStorage.setItem(k, JSON.stringify({ version: 1, profile: { name: 'Synthetic preserved' }, jobs: [] })), legacy);
-  await page.reload(); await page.locator('#passphrase').fill(pass); await page.locator('#passphrase-confirm').fill(pass); await page.locator('#workspace-consent').check(); await page.locator('#create-workspace').click();
+  await page.reload(); await page.locator('#password').fill(pass); await page.locator('#password-confirm').fill(pass); await page.locator('#workspace-consent').check(); await page.locator('#create-workspace').click();
   await expect(page.locator('#signup-error')).toContainText('Load the older profile first');
   expect(await page.evaluate(k => localStorage.getItem(k), legacy)).toContain('Synthetic preserved');
   expect(await page.evaluate(k => localStorage.getItem(k), key)).toBeNull();
@@ -157,4 +157,46 @@ test('DOCX rejects oversized expanded XML, entity declarations and excessive nes
     await expect(page.locator('#cv-text')).toHaveValue('');
     await expect(page.locator('#cv-file')).toBeEnabled();
   }
+});
+
+test('new password requirements apply to signup and saving a temporary session', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByLabel('Workspace password', { exact: true })).toBeVisible();
+  await expect(page.locator('#password-hint')).toContainText('uppercase letter and one special character');
+  await page.locator('#workspace-consent').check();
+  for (const password of ['lowercase-password-only!', 'UppercaseLettersOnly', 'Uppercase letters only']) {
+    await page.locator('#password').fill(password); await page.locator('#password-confirm').fill(password); await page.locator('#create-workspace').click();
+    await expect(page.locator('#signup-error')).toContainText('uppercase letter and one special character');
+    expect(await page.evaluate(k => localStorage.getItem(k), key)).toBeNull();
+    await expect(page.locator('#workspace')).toBeHidden();
+  }
+  await page.locator('#session-only').click(); await page.locator('#save-open').click(); await page.locator('#save-consent').check();
+  for (const password of ['lowercase-password-only!', 'UppercaseLettersOnly']) {
+    await page.locator('#save-password').fill(password); await page.locator('#save-password-confirm').fill(password); await page.locator('#save-confirm').click();
+    await expect(page.locator('#save-error')).toContainText('uppercase letter and one special character');
+    expect(await page.evaluate(k => localStorage.getItem(k), key)).toBeNull();
+  }
+  await page.locator('#save-password').fill(pass); await page.locator('#save-password-confirm').fill(pass); await page.locator('#save-confirm').click();
+  await expect(page.locator('#save-dialog')).toBeHidden(); await saved(page);
+});
+
+test('original passwords unlock through the form and restore an older encrypted backup', async ({ page }) => {
+  await page.goto('/');
+  const password = 'original lowercase words';
+  const raw = await page.evaluate(async password => {
+    const { seal } = await import('/src/vault.mjs');
+    const { blankState, serialiseState } = await import('/src/model.mjs');
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 600000 }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const state = blankState(); state.profile.currentRole = 'Synthetic original workspace';
+    return seal(serialiseState(state), { key, salt: btoa(String.fromCharCode(...salt)) });
+  }, password);
+  await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw }); await page.reload();
+  await expect(page.locator('#password-hint')).toContainText('Existing passwords still work');
+  await unlock(page, password); await expect(page.locator('#currentRole')).toHaveValue('Synthetic original workspace');
+  await page.locator('#clear-open').click(); await page.locator('#clear-confirm').click(); await expect(page.locator('#signup')).toBeVisible();
+  await page.locator('#backup-file').setInputFiles({ name: 'synthetic-original-backup.json', mimeType: 'application/json', buffer: Buffer.from(raw) });
+  await expect(page.locator('#password-hint')).toContainText('Existing passwords still work');
+  await unlock(page, password); await expect(page.locator('#currentRole')).toHaveValue('Synthetic original workspace');
 });

@@ -5,14 +5,14 @@ The next priority is to see whether a person can get one useful next action, ret
 ## Your first run
 
 1. Open https://cmcgerty88.github.io/Ai-Jobs/ and look for **Private pilot · v0.2**. Refresh after deployment if the older version is shown.
-2. Create a private workspace on your own device with a strong, unique passphrase. Keep it safe: there is no reset. Alternatively, choose Try without saving. No email or payment is required.
+2. Create a private workspace on your own device with a unique password of 14–256 characters, including at least one uppercase letter and one special character such as !, @ or #. Keep it safe: there is no reset. Alternatively, choose Try without saving. No email or payment is required.
 3. Read your CV locally or type your experience. Remove unnecessary personal details. Choose accurate examples and skills, say what help you want and what useful progress would look like, then confirm the profile.
 4. Enter work preferences, explore target directions and save one or two worth checking.
 5. Bring one actual vacancy from an employer/job site. Enter the facts, leave missing facts unknown and review the job analysis.
 6. Open the dashboard. After applying, record the application date. Update outcomes later, including completed interviews. Add one next action and date. Dates/stages are committed using **Update outcome**; half-written vacancy and tracker forms are not saved. Profile/preferences and confirmed records autosave in an unlocked encrypted workspace.
 7. Read the recommendation and its evidence limits. Correct inaccurate records. A lack of reply is not automatically a rejection; the app cannot know the employer's reason.
 8. Lock when finished. Return in the same browser, unlock, reconfirm your profile and update your progress. The app remembers reviewed facts, goals, saved directions, job records and optional feedback. It does not retain the raw CV, observe your activity elsewhere, learn across users or train a model.
-9. Optionally answer the two usefulness questions and preview the feedback summary. Nothing is sent. You decide whether to share that small summary directly with your pilot organiser after they explain how feedback will be used. Never share your passphrase or CV through GitHub.
+9. Optionally answer the two usefulness questions and preview the feedback summary. Nothing is sent. You decide whether to share that small summary directly with your pilot organiser after they explain how feedback will be used. Never share your password or CV through GitHub.
 
 ## Invite five people, then observe two sessions each
 

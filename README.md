@@ -8,7 +8,7 @@ With GitHub Pages configured for `main` → `/ (root)`, the app is served at:
 
 https://cmcgerty88.github.io/Ai-Jobs/
 
-1. Create a private workspace with a strong passphrase (no email/server account), or try without saving. Then choose a PDF, DOCX or TXT CV, or type your experience manually.
+1. Create a private workspace with a strong password (no email/server account), or try without saving. Then choose a PDF, DOCX or TXT CV, or type your experience manually.
 2. Review the CV text, select relevant passages, and add accurate examples and skills to your profile. Skill suggestions are literal text matches, not AI assessments.
 3. Confirm the profile and enter your work preferences.
 4. Open **Explore directions** to see role titles connected to your confirmed skills. Check the explanations, browse the whole library, and save up to five directions. Copy search phrases if useful; no search happens automatically.
@@ -28,7 +28,7 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - Saved role directions and next actions, with optional device saving. Previously saved profiles remain compatible.
 - UK/Republic of Ireland work preferences, explicit currency and gross annual pay, working pattern, hours and sponsorship constraints.
 - Real-vacancy entry, conservative constraint checks, source-check dates and user-controlled essential-requirement confirmation.
-- Encrypted opt-in autosaving, passphrase unlock, inactivity lock, encrypted backup/restore, 30-day expiry and deletion controls.
+- Encrypted opt-in autosaving, password unlock, inactivity lock, encrypted backup/restore, 30-day expiry and deletion controls.
 - User goals, application dates/stages, completed interviews, follow-up actions, weekly counts and cautious rule-based recommendations.
 - Optional local usefulness feedback with a minimised preview; nothing sent automatically.
 - Responsive layout and keyboard-accessible forms/dialogs.
@@ -53,9 +53,11 @@ CV-reading limits: 5 MB per file, 30 PDF pages and 100,000 extracted characters.
 
 The CV readers are bundled and served from this repository; no CDN is used. CV files and their text are processed in the browser and are not uploaded. No app analytics or external API calls are made. GitHub Pages still receives ordinary hosting requests, and employer links open external websites when selected.
 
-**Create private workspace** is local signup, not a verified online account. Explicit consent enables encrypted autosaving in browser localStorage. Web Crypto uses AES-256-GCM and PBKDF2-SHA-256 (600,000 iterations) with a random salt and fresh IV per save. The passphrase and key are never persisted by the app. No recovery/reset or cloud sync is provided. Use a current browser over HTTPS and a trusted personal device. Try without saving holds information in the tab only.
+New passwords require 14–256 characters, at least one uppercase letter and one special character (punctuation or a symbol; spaces and numbers alone do not count). Existing workspace passwords and backups still unlock using the original password.
 
-**Lock workspace** and ten minutes without activity clear the unlocked page, including raw CV text. Application updates and vacancy edits must be submitted to become saved records. Profile changes autosave after a short debounce; the status shows success/failure. Automatic lock attempts to save first but discards unsaved edits if storage fails. Expiry is 30 days after the last save, enforced by deletion on the next visit; no website can delete local storage while closed. Encrypted backups also expire and need the passphrase to restore. Remove unwanted downloads/backups separately.
+**Create private workspace** is local signup, not a verified online account. Explicit consent enables encrypted autosaving in browser localStorage. Web Crypto uses AES-256-GCM and PBKDF2-SHA-256 (600,000 iterations) with a random salt and fresh IV per save. The password and key are never persisted by the app. No recovery/reset or cloud sync is provided. Use a current browser over HTTPS and a trusted personal device. Try without saving holds information in the tab only.
+
+**Lock workspace** and ten minutes without activity clear the unlocked page, including raw CV text. Application updates and vacancy edits must be submitted to become saved records. Profile changes autosave after a short debounce; the status shows success/failure. Automatic lock attempts to save first but discards unsaved edits if storage fails. Expiry is 30 days after the last save, enforced by deletion on the next visit; no website can delete local storage while closed. Encrypted backups also expire and need the password to restore. Remove unwanted downloads/backups separately.
 
 **Clear my information** removes both saved formats and resets current inputs. Encryption does not protect against compromised devices, malicious extensions/site code or someone using an unlocked workspace. GitHub Pages repositories share an origin; a dedicated origin is required before wider service deployment. See the review for threat boundaries, UK/EU GDPR considerations and future authentication/database requirements. Do not put real CVs, candidate exports or secrets in this repository or issues. All fixtures are fictional.
 

@@ -13,9 +13,16 @@ export function parseVault(raw) {
       typeof v.salt !== 'string' || typeof v.iv !== 'string' || typeof v.data !== 'string' || bytes(v.salt).length !== 16 || bytes(v.iv).length !== 12 || bytes(v.data).length < 16) throw new Error('Invalid workspace.');
   return v;
 }
-export async function newKey(passphrase, salt = crypto.getRandomValues(new Uint8Array(16))) {
-  if (typeof passphrase !== 'string' || passphrase.length < 14 || passphrase.length > 256) throw new Error('Use a passphrase of 14–256 characters, ideally several unrelated words.');
-  const material = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+export const PASSWORD_REQUIREMENTS = 'Use 14–256 characters, including at least one uppercase letter and one special character (for example !, @ or #).';
+export async function newKey(password) {
+  if (typeof password !== 'string' || password.length < 14 || password.length > 256 || !/\p{Lu}/u.test(password) || !/[\p{P}\p{S}]/u.test(password)) throw new Error(PASSWORD_REQUIREMENTS);
+  return deriveKey(password, crypto.getRandomValues(new Uint8Array(16)));
+}
+// Unlock uses the original length rules: changing creation policy must not lock
+// existing users out of their encrypted workspace or backups.
+async function deriveKey(password, salt) {
+  if (typeof password !== 'string' || password.length < 14 || password.length > 256) throw new Error('Enter your existing password (14–256 characters).');
+  const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITERATIONS }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   return { key, salt: b64(salt) };
 }
@@ -25,10 +32,10 @@ export async function seal(json, session, now = Date.now()) {
   const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: bytes(v.iv), additionalData: header(v) }, session.key, encoder.encode(json));
   return JSON.stringify({ ...v, data: b64(new Uint8Array(data)) });
 }
-export async function unseal(raw, passphrase, now = Date.now()) {
+export async function unseal(raw, password, now = Date.now()) {
   const v = parseVault(raw);
   if (v.expiresAt <= now) throw new Error('This workspace has expired.');
-  const session = await newKey(passphrase, bytes(v.salt));
+  const session = await deriveKey(password, bytes(v.salt));
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(v.iv), additionalData: header(v) }, session.key, bytes(v.data));
   return { session, json: new TextDecoder('utf-8', { fatal: true }).decode(plain) };
 }

@@ -1,9 +1,15 @@
 import { STORAGE_KEY, restoreState, serialiseState } from './model.mjs';
-import { VAULT_KEY, parseVault, newKey, seal, unseal } from './vault.mjs';
+import { VAULT_KEY, PASSWORD_REQUIREMENTS, parseVault, newKey, seal, unseal } from './vault.mjs';
 const $ = id => document.getElementById(id);
 export function initWorkspace({ getState, setState, start, announce }) {
   let session = null, saved = null, expectedRaw = null, generation = 0, timer, active = false, pending = Promise.resolve(), backup = null, failed = false, legacyLoaded = false;
   let lastActivity = Date.now();
+  function passwordMode(unlocking) {
+    $('password').autocomplete = unlocking ? 'current-password' : 'new-password';
+    $('password-hint').textContent = unlocking
+      ? 'Enter the password you originally chose. Existing passwords still work, even if they do not meet the new creation rules.'
+      : PASSWORD_REQUIREMENTS + ' Don’t reuse a password from another service.';
+  }
   function lockedUI() {
     let encrypted = false, legacy = false;
     try {
@@ -20,17 +26,17 @@ export function initWorkspace({ getState, setState, start, announce }) {
     } catch { $('signup-error').textContent = 'Browser storage is unavailable. You can try without saving.'; }
     $('restore-panel').hidden = !encrypted && !legacy;
     $('restore-panel').querySelector('strong').textContent = legacy ? 'An older, unencrypted profile is stored in this browser.' : 'Your encrypted workspace is ready to unlock.';
-    $('restore-panel').querySelector('p').textContent = legacy ? 'Load and encrypt it using a new passphrase, or delete the saved copy. The old copy remains readable in browser storage until you do.' : 'Enter your passphrase below. We cannot reset it. No raw CV was saved.';
+    $('restore-panel').querySelector('p').textContent = legacy ? 'Load and encrypt it using a new password, or delete the saved copy. The old copy remains readable in browser storage until you do.' : 'Enter your password below. We cannot reset it. No raw CV was saved.';
     $('load-saved').hidden = !legacy || encrypted;
     $('signup-confirm-fields').hidden = encrypted;
     $('create-workspace').textContent = encrypted ? 'Unlock workspace' : 'Create private workspace';
-    $('passphrase').autocomplete = encrypted ? 'current-password' : 'new-password';
+    passwordMode(encrypted);
     $('session-only').hidden = encrypted || legacy;
   }
   function enter() {
     active = true; lastActivity = Date.now();
     $('signup').hidden = true; $('restore-panel').hidden = true; $('backup-restore').hidden = true; $('workspace').hidden = false;
-    $('signup-form').reset(); $('save-passphrase').value = ''; $('save-passphrase-confirm').value = '';
+    $('signup-form').reset(); $('save-password').value = ''; $('save-password-confirm').value = '';
     start(); changed();
   }
   async function write(json) {
@@ -65,7 +71,7 @@ export function initWorkspace({ getState, setState, start, announce }) {
   }
   async function create(pass, confirm, consent) {
     if (!consent) throw new Error('Please confirm that you want encrypted saving on this device.');
-    if (pass !== confirm) throw new Error('The passphrases do not match.');
+    if (pass !== confirm) throw new Error('The passwords do not match.');
     if (!crypto.subtle || !navigator.locks) throw new Error('Encrypted saving requires a current browser over HTTPS. Try without saving instead.');
     if (localStorage.getItem(STORAGE_KEY) && !legacyLoaded) throw new Error('Load the older profile first to keep your work, or delete the saved copy before starting again.');
     if (localStorage.getItem(VAULT_KEY)) throw new Error('An encrypted workspace already exists. Unlock it or delete the saved copy first.');
@@ -78,7 +84,7 @@ export function initWorkspace({ getState, setState, start, announce }) {
     try {
       const raw = backup || localStorage.getItem(VAULT_KEY);
       if (raw) {
-        const opened = await unseal(raw, $('passphrase').value);
+        const opened = await unseal(raw, $('password').value);
         const restored = restoreState(opened.json);
         if (backup) {
           const previous = localStorage.getItem(VAULT_KEY), previousLegacy = localStorage.getItem(STORAGE_KEY);
@@ -89,10 +95,10 @@ export function initWorkspace({ getState, setState, start, announce }) {
           });
         }
         session = opened.session; expectedRaw = raw; setState(restored); saved = serialiseState(restored); backup = null;
-      } else await create($('passphrase').value, $('passphrase-confirm').value, $('workspace-consent').checked);
+      } else await create($('password').value, $('password-confirm').value, $('workspace-consent').checked);
       enter();
-    } catch (error) { $('signup-error').textContent = backup || expectedRaw ? 'Unable to unlock: check your passphrase. The workspace may be damaged or expired.' : error.message; }
-    finally { button.disabled = false; $('passphrase').value = ''; $('passphrase-confirm').value = ''; }
+    } catch (error) { $('signup-error').textContent = backup || expectedRaw ? 'Unable to unlock: check your password. The workspace may be damaged or expired.' : error.message; }
+    finally { button.disabled = false; $('password').value = ''; $('password-confirm').value = ''; }
   });
   $('session-only').addEventListener('click', enter);
   $('load-saved').addEventListener('click', () => {
@@ -105,11 +111,11 @@ export function initWorkspace({ getState, setState, start, announce }) {
   });
   $('save-confirm').addEventListener('click', async () => {
     $('save-confirm').disabled = true;
-    try { await create($('save-passphrase').value, $('save-passphrase-confirm').value, $('save-consent').checked); $('save-dialog').close(); changed(); }
+    try { await create($('save-password').value, $('save-password-confirm').value, $('save-consent').checked); $('save-dialog').close(); changed(); }
     catch (error) { $('save-error').textContent = error.message; }
-    finally { $('save-confirm').disabled = false; $('save-passphrase').value = ''; $('save-passphrase-confirm').value = ''; }
+    finally { $('save-confirm').disabled = false; $('save-password').value = ''; $('save-password-confirm').value = ''; }
   });
-  $('save-dialog').addEventListener('close', () => { $('save-passphrase').value = ''; $('save-passphrase-confirm').value = ''; });
+  $('save-dialog').addEventListener('close', () => { $('save-password').value = ''; $('save-password-confirm').value = ''; });
   async function erase() {
     generation++; clearTimeout(timer); session = null;
     const remove = () => { localStorage.removeItem(VAULT_KEY); localStorage.removeItem(STORAGE_KEY); };
@@ -151,7 +157,7 @@ export function initWorkspace({ getState, setState, start, announce }) {
       const raw = await seal(serialiseState(getState()), session);
       const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
       const link = document.createElement('a'); link.href = url; link.download = 'rolebridge-encrypted-backup.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-      announce('Encrypted backup downloaded. Keep your passphrase separately. Delete unwanted backups yourself.');
+      announce('Encrypted backup downloaded. Keep your password separately. Delete unwanted backups yourself.');
     } catch { status('Backup could not be created. Your current inputs are still in this tab.'); }
   });
   $('backup-file').addEventListener('change', async () => {
@@ -159,8 +165,8 @@ export function initWorkspace({ getState, setState, start, announce }) {
       const file = $('backup-file').files[0]; if (!file) return;
       if (file.size > 1600000) throw new Error();
       const raw = await file.text(); if (parseVault(raw).expiresAt <= Date.now()) throw new Error();
-      backup = raw; $('signup-confirm-fields').hidden = true; $('create-workspace').textContent = 'Unlock backup'; $('signup').hidden = false;
-      $('backup-status').textContent = 'Backup read in this tab. Enter its passphrase to restore it. Nothing has been replaced yet.'; $('passphrase').focus();
+      backup = raw; passwordMode(true); $('signup-confirm-fields').hidden = true; $('create-workspace').textContent = 'Unlock backup'; $('signup').hidden = false;
+      $('backup-status').textContent = 'Backup read in this tab. Enter its password to restore it. Nothing has been replaced yet.'; $('password').focus();
     } catch { backup = null; lockedUI(); $('backup-status').textContent = 'This is not a supported, unexpired encrypted backup.'; }
     $('backup-file').value = '';
   });

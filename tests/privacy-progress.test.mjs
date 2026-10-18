@@ -3,23 +3,23 @@ import assert from 'node:assert/strict';
 import { newKey, seal, unseal, parseVault, RETENTION_MS } from '../src/vault.mjs';
 import { blankState, cleanJob, restoreState, serialiseState } from '../src/model.mjs';
 import { diagnose, cleanProgress, progressError } from '../src/progress.mjs';
-const passphrase = 'synthetic-test-only-passphrase';
+const password = 'Synthetic-test-only-password!';
 const now = Date.parse('2026-10-18T12:00:00Z');
 test('vault round-trip excludes plaintext and uses a new IV for every write', async () => {
-  const session = await newKey(passphrase);
+  const session = await newKey(password);
   assert.equal(session.key.extractable, false);
   const a = await seal('{"name":"Synthetic only"}', session, now), b = await seal('{"name":"Synthetic only"}', session, now);
   assert.ok(!a.includes('Synthetic only')); assert.notEqual(parseVault(a).iv, parseVault(b).iv);
-  assert.equal((await unseal(a, passphrase, now)).json, '{"name":"Synthetic only"}');
+  assert.equal((await unseal(a, password, now)).json, '{"name":"Synthetic only"}');
   assert.equal(parseVault(a).expiresAt, now + RETENTION_MS);
 });
-test('wrong passphrase, tampering, unsupported cost and expiry cannot unlock', async () => {
-  const raw = await seal('{}', await newKey(passphrase), now);
-  await assert.rejects(unseal(raw, 'incorrect-passphrase-test', now));
+test('wrong password, tampering, unsupported cost and expiry cannot unlock', async () => {
+  const raw = await seal('{}', await newKey(password), now);
+  await assert.rejects(unseal(raw, 'incorrect-password-test', now));
   const changed = JSON.parse(raw); changed.expiresAt++;
-  await assert.rejects(unseal(JSON.stringify(changed), passphrase, now));
+  await assert.rejects(unseal(JSON.stringify(changed), password, now));
   changed.iterations = 999999999; assert.throws(() => parseVault(JSON.stringify(changed)));
-  await assert.rejects(unseal(raw, passphrase, now + RETENTION_MS));
+  await assert.rejects(unseal(raw, password, now + RETENTION_MS));
   await assert.rejects(newKey('short'));
   assert.throws(() => parseVault('x'.repeat(1600001)));
 });
@@ -55,4 +55,24 @@ test('sparse records do not diagnose failure; goal changes adapt next action', (
   assert.match(diagnose(state, now).recommendation, /role directions/);
   state.profile.goal = 'offers'; state.jobs = [job('interview', '2026-10-01', '2026-10-10')];
   assert.match(diagnose(state, now).recommendation, /Practise one interview/);
+});
+
+test('new workspace passwords require length, uppercase and a symbol, not just spaces or digits', async () => {
+  for (const password of ['Short!', 'lowercase-only-password!', 'UppercaseLettersOnly', 'Uppercase letters only', 'UppercaseLetters1234', 'A!'.padEnd(257, 'x')]) {
+    await assert.rejects(newKey(password), /uppercase letter and one special character/);
+  }
+  const session = await newKey('LongEnoughPassword!');
+  const raw = await seal('{}', session, now);
+  assert.equal((await unseal(raw, 'LongEnoughPassword!', now)).json, '{}');
+});
+
+test('original lowercase passwords still decrypt existing workspaces and backups', async () => {
+  // Reproduce the previous release independently; the new creation policy must
+  // never be used to validate an existing password before key derivation.
+  const password = 'original lowercase words';
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 600000 }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const raw = await seal('{"legacy":true}', { key, salt: Buffer.from(salt).toString('base64') }, now);
+  assert.equal((await unseal(raw, password, now)).json, '{"legacy":true}');
 });
