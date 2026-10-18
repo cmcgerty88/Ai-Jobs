@@ -1,3 +1,4 @@
+import { initApplicationPack } from './application-ui.mjs';
 import { blankState, cleanProfile, cleanJob, safeJobUrl, findSkillMentions } from './model.mjs';
 import { initWorkspace } from './workspace.mjs';
 import { diagnose, STAGES, GOALS, cleanProgress, progressError } from './progress.mjs';
@@ -9,7 +10,7 @@ const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
 let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
-let workspace;
+let workspace, applicationPack;
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
 
 function announce(text) { $('announcement').textContent = ''; requestAnimationFrame(() => { $('announcement').textContent = text; }); }
@@ -36,9 +37,10 @@ function showStep(step, focus = true) {
   if (step === 3) renderDirections();
   if (step === 4) renderResults();
   if (step === 5) renderDashboard();
+  if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
   $('dashboard-link').hidden = step !== 4;
   if (focus) {
-    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title' }[step]);
+    const heading = $({ 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
@@ -251,6 +253,7 @@ function renderResults() {
       const select = node('button', job.selected ? 'Added to your plan' : 'Add to your plan', 'secondary'); select.type = 'button'; select.setAttribute('aria-pressed', String(job.selected));
       select.addEventListener('click', () => { job.selected = !job.selected; select.textContent = job.selected ? 'Added to your plan' : 'Add to your plan'; select.setAttribute('aria-pressed', String(job.selected)); renderPlan(); setSaveStatus(); }); actions.append(select);
     }
+    const prepare = node('button', 'Build CV & interview pack', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => { navigate(6); applicationPack.render(job.id).catch(() => announce('Please try opening this pack again.')); }); actions.append(prepare);
     if (job.url) { const link = node('a', 'Open original vacancy'); link.href = job.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link); }
     const edit = node('button', 'Edit', 'text-button'); edit.type = 'button'; edit.setAttribute('aria-label', `Edit ${job.title}`); edit.addEventListener('click', () => openJob(job));
     const remove = node('button', 'Remove', 'text-button danger'); remove.type = 'button'; remove.setAttribute('aria-label', `Remove ${job.title}`);
@@ -267,7 +270,7 @@ function renderPlan() {
   for (const role of directions) { const item = node('li'); item.append(node('strong', 'Explore: ' + role.title), node('small', role.example)); plan.append(item); }
   for (const job of selected) { const item = node('li'); item.append(node('strong', job.title), node('small', assessJob(state.profile, job).nextAction)); plan.append(item); }
 }
-$('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
+$('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); state.packs = state.packs.filter(pack => pack.jobId !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
 
 function renderDashboard() {
   syncProfile(); const report = diagnose(state);
@@ -284,6 +287,7 @@ function renderDashboard() {
   if (!state.jobs.length) list.append(node('p', 'Add a vacancy in Compare vacancies to start tracking. Your dashboard will grow as you record outcomes.', 'empty-state'));
   for (const job of state.jobs) {
     const p = cleanProgress(job.progress), card = node('article', undefined, 'card'); card.append(node('h3', job.title), node('p', job.employer, 'small muted'));
+    const prepare = node('button', 'Prepare CV & interview pack', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => { navigate(6); applicationPack.render(job.id).catch(() => announce('Please try opening this pack again.')); }); card.append(prepare);
     const form = node('form', undefined, 'tracker-form'); form.autocomplete = 'off'; const fields = node('div', undefined, 'field-grid');
     const add = (name, label, type, value) => {
       const wrapper = node('div'), id = `track-${job.id}-${name}`, lab = node('label', label); lab.htmlFor = id;
@@ -330,4 +334,5 @@ workspace = initWorkspace({
   setState: value => { state = value; fillProfile(); },
   start: () => { showStep(1); }, announce
 });
+applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce });
 fillProfile(); showStep(1, false);

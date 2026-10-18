@@ -30,7 +30,11 @@ export async function seal(json, session, now = Date.now()) {
   if (typeof json !== 'string' || json.length > 900000) throw new Error('Workspace is too large.');
   const v = { version: 1, iterations: ITERATIONS, salt: session.salt, expiresAt: now + RETENTION_MS, iv: b64(crypto.getRandomValues(new Uint8Array(12))) };
   const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: bytes(v.iv), additionalData: header(v) }, session.key, encoder.encode(json));
-  return JSON.stringify({ ...v, data: b64(new Uint8Array(data)) });
+  const raw = JSON.stringify({ ...v, data: b64(new Uint8Array(data)) });
+  // Multibyte document text can exceed the restore limit even when its string
+  // length is below the plaintext limit. Never write a vault that cannot be reopened.
+  if (raw.length > 1600000) throw new Error('Workspace is too large. Remove older vacancies or shorten document notes before saving.');
+  return raw;
 }
 export async function unseal(raw, password, now = Date.now()) {
   const v = parseVault(raw);

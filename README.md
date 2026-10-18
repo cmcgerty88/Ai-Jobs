@@ -1,6 +1,6 @@
 # RoleBridge
 
-A private device-only pilot for people exploring their next role after redundancy. The existing CV reader, role explorer and vacancy analysis now connect to an encrypted workspace and an application-outcome dashboard. OpenAI remains disconnected.
+A private device-only pilot for people exploring their next role after redundancy. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
 
 ## Try it
 
@@ -14,7 +14,8 @@ https://cmcgerty88.github.io/Ai-Jobs/
 4. Open **Explore directions** to see role titles connected to your confirmed skills. Check the explanations, browse the whole library, and save up to five directions. Copy search phrases if useful; no search happens automatically.
 5. Find a real vacancy on an employer's site. Add its link, description and stated conditions. Leave missing information unknown.
 6. Review the reasons to consider, investigate or skip it. Choose next actions for your plan.
-7. Continue to the dashboard. Record application dates, outcomes and next actions; review the recommendation and its limitations. Return in the same browser to update your progress.
+7. Choose **Build CV & interview pack** on a vacancy. Review its tailored draft, add your career details, confirm the facts and download Word, PDF or text. Prepare truthful answers to the role-specific questions and download the interview PDF.
+8. Continue to the dashboard. Record application dates, outcomes and next actions; review the recommendation and its limitations. Return in the same browser to update your progress.
 
 Follow the [private pilot guide](docs/PRIVATE-PILOT.md) to test this with real users. Read the [privacy/security review and hosted-account gates](docs/PRIVACY-SECURITY-REVIEW.md) before collecting research data or adding external processing.
 
@@ -31,6 +32,8 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - Encrypted opt-in autosaving, password unlock, inactivity lock, encrypted backup/restore, 30-day expiry and deletion controls.
 - User goals, application dates/stages, completed interviews, follow-up actions, weekly counts and cautious rule-based recommendations.
 - Optional local usefulness feedback with a minimised preview; nothing sent automatically.
+- Vacancy-specific, editable CV drafts: reordered confirmed skills and examples, shared career details, preview, review checks and Word/PDF/text downloads.
+- Interview questions for all 12 editorial roles, plus general and user-selected advert-requirement prompts; private practice notes and PDF/text downloads.
 - Responsive layout and keyboard-accessible forms/dialogs.
 
 There is no automatic job search, external AI analysis, email delivery, hosted account, cloud database or automatic application sending. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
@@ -45,7 +48,7 @@ A suggested direction requires at least two distinct matching skill groups, incl
 
 Missing matches are areas to check, not a conclusion that the person lacks those skills. Roles can always be browsed and saved for exploration without matching. Actual job requirements, pay, work location, qualifications and eligibility must be checked against individual vacancies. Search phrases incorporate selected location/country and work pattern but are only plain text; the user decides whether to copy them into a search service.
 
-The reviewed-data schema remains version 1 with optional role directions, profile goals, per-job progress and categorical feedback. Older plaintext profiles can be explicitly migrated to a separate encrypted storage envelope; successful migration removes the plaintext key. Raw CV text is excluded.
+The reviewed-data schema remains version 1 with optional role directions, profile goals, per-job progress, categorical feedback, reviewed CV-builder fields and up to five application packs. Older plaintext profiles can be explicitly migrated to a separate encrypted storage envelope; successful migration removes the plaintext key. Raw CV text is excluded.
 
 CV-reading limits: 5 MB per file, 30 PDF pages and 100,000 extracted characters. Scanned PDFs need pasted text or a text-based export; OCR and password entry are not provided. DOCX extraction reads the main document text, including ordinary tables; separate headers, footers and footnotes are not included. Review the extracted text before using it.
 
@@ -57,7 +60,7 @@ New passwords require 14–256 characters, at least one uppercase letter and one
 
 **Create private workspace** is local signup, not a verified online account. Explicit consent enables encrypted autosaving in browser localStorage. Web Crypto uses AES-256-GCM and PBKDF2-SHA-256 (600,000 iterations) with a random salt and fresh IV per save. The password and key are never persisted by the app. No recovery/reset or cloud sync is provided. Use a current browser over HTTPS and a trusted personal device. Try without saving holds information in the tab only.
 
-**Lock workspace** and ten minutes without activity clear the unlocked page, including raw CV text. Application updates and vacancy edits must be submitted to become saved records. Profile changes autosave after a short debounce; the status shows success/failure. Automatic lock attempts to save first but discards unsaved edits if storage fails. Expiry is 30 days after the last save, enforced by deletion on the next visit; no website can delete local storage while closed. Encrypted backups also expire and need the password to restore. Remove unwanted downloads/backups separately.
+**Lock workspace** and ten minutes without activity clear the unlocked page, including raw CV text. Application updates and vacancy edits must be submitted to become saved records. CV-builder fields, CV drafts and interview notes also autosave in an unlocked workspace. Profile changes autosave after a short debounce; the status shows success/failure. Automatic lock attempts to save first but discards unsaved edits if storage fails. Expiry is 30 days after the last save, enforced by deletion on the next visit; no website can delete local storage while closed. Encrypted backups also expire and need the password to restore. Remove unwanted downloads/backups separately.
 
 **Clear my information** removes both saved formats and resets current inputs. Encryption does not protect against compromised devices, malicious extensions/site code or someone using an unlocked workspace. GitHub Pages repositories share an origin; a dedicated origin is required before wider service deployment. See the review for threat boundaries, UK/EU GDPR considerations and future authentication/database requirements. Do not put real CVs, candidate exports or secrets in this repository or issues. All fixtures are fictional.
 
@@ -103,3 +106,15 @@ Automated AI analysis and job feeds need a separately hosted backend, credential
 A job-data provider must be checked for current UK/Irish coverage, permitted usage and prices. Employer vacancy feeds may be another route. Never label a generated job as a live opportunity or treat a vacancy's age as proof of a ghost job.
 
 The current comparison logic is deliberately explicit: unknown essential requirements, salary or sponsorship remain uncertain; hard conflicts are shown; the candidate controls all applications and messages.
+
+## CV and interview documents
+
+The CV builder is available from each vacancy, the dashboard, or **CV & interview pack** in the navigation. Add employment/project/voluntary experience (most recent first), education and relevant certifications. Identity/contact fields are optional for an anonymised CV; otherwise give a display name and one contact method. The app never infers your employers, employment dates, qualifications or achievements from raw CV text.
+
+Tailoring is local and transparent: confirmed skill labels that occur in the advert are placed first; whole reviewed experience passages with matching longer words are prioritised. Users edit the result. It is not semantic AI analysis. A limited keyword check flags terms for review, never inserts unsupported qualifications and never gives an ATS score. When a profile or advert changes, a warning preserves existing draft edits; refreshing a draft requires confirmation. Career details are shared across packs; each vacancy has separate CV text and interview notes. Deleting a vacancy deletes its pack.
+
+CV exports are single-column DOCX, selectable-text PDF and UTF-8 text. Use the employer’s requested format, check the downloaded file and verify any fields populated by an applicant tracking system. No format or keyword strategy guarantees passing ATS screening or an interview. Word files contain text paragraphs, no macros, external relationships, images, tables, text boxes, headers or footers. PDFs embed DejaVu Sans with character mappings and paginate locally. Unsupported PDF characters produce a visible error; Word/text preserve them as a fallback. Export is capped at 30 PDF pages to bound resource use.
+
+Interview packs use an editorial question library and up to three requirements the user chooses from the advert. They include STAR guidance, candidate-written notes and questions to ask the employer; they are practice prompts, not actual employer questions or generated model answers. Unsupported roles receive honest general preparation plus the user’s requirements. Changing question focus asks before deleting existing answers.
+
+These application documents are **unencrypted downloads** intended for use outside the app; the builder explains this before download. They contain only the selected CV fields or interview questions/notes. They exclude raw CV text, work-preference constraints, other vacancies and unrelated profile fields. Encrypted workspace backups remain a separate feature. Downloaded documents cannot be deleted or expired remotely by the app. No application is sent automatically and no OpenAI service is connected.

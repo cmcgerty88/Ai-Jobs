@@ -10,3 +10,10 @@ private/
 # Candidate backups must never enter the public repository.
 rolebridge-private-profile*.json
 rolebridge-encrypted-backup*.json
+
+# Unencrypted application documents belong to the candidate, not GitHub.
+rolebridge-cv-*.pdf
+rolebridge-cv-*.docx
+rolebridge-cv-*.txt
+rolebridge-interview-*.pdf
+rolebridge-interview-*.txt

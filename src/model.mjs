@@ -1,9 +1,10 @@
+import { blankCv, cleanCv, cleanPacks } from './application-data.mjs';
 import { cleanProgress, GOALS } from './progress-model.mjs';
 export const STORAGE_KEY = 'rolebridge.private-profile.v1';
 export const MAX_TEXT = 100_000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const blankProfile = () => ({ name: '', currentRole: '', evidence: '', skills: '', country: 'GB', currency: 'GBP', minimumSalary: '', locations: '', workMode: 'any', maxOfficeDays: '5', hours: 'any', sponsorship: 'unknown', goal: 'clarity', expectedOutcome: '' });
-export const blankState = () => ({ version: 1, profile: blankProfile(), jobs: [], roleDirections: [], feedback: { useful: '', return: '' } });
+export const blankState = () => ({ version: 1, profile: blankProfile(), jobs: [], roleDirections: [], feedback: { useful: '', return: '' }, cv: blankCv(), packs: [] });
 const text = (value, limit = 4000) => typeof value === 'string' ? value.slice(0, limit) : '';
 const choice = (value, options, fallback) => options.includes(value) ? value : fallback;
 export function cleanProfile(value = {}) {
@@ -49,7 +50,8 @@ export function cleanJob(value = {}) {
   };
 }
 export function serialiseState(value) {
-  return JSON.stringify({ version: 1, profile: cleanProfile(value.profile), jobs: (value.jobs || []).slice(0, 30).map(cleanJob), roleDirections: cleanRoleDirections(value.roleDirections), feedback: cleanFeedback(value.feedback) });
+  const jobs = (value.jobs || []).slice(0, 30).map(cleanJob).filter(j => j.id && j.title);
+  return JSON.stringify({ version: 1, profile: cleanProfile(value.profile), jobs, roleDirections: cleanRoleDirections(value.roleDirections), feedback: cleanFeedback(value.feedback), cv: cleanCv(value.cv), packs: cleanPacks(value.packs, jobs.map(j => j.id)) });
 }
 export function cleanRoleDirections(value) {
   return Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && /^[a-z][a-z0-9-]{0,59}$/.test(id)))].slice(0, 5) : [];
@@ -58,7 +60,8 @@ export function restoreState(raw) {
   if (!raw || raw.length > 900_000) throw new Error('Saved data is too large or empty.');
   const value = JSON.parse(raw);
   if (!value || value.version !== 1 || !value.profile || !Array.isArray(value.jobs)) throw new Error('Unrecognised saved profile.');
-  return { version: 1, profile: cleanProfile(value.profile), jobs: value.jobs.slice(0, 30).map(cleanJob).filter(j => j.id && j.title), roleDirections: cleanRoleDirections(value.roleDirections), feedback: cleanFeedback(value.feedback) };
+  const jobs = value.jobs.slice(0, 30).map(cleanJob).filter(j => j.id && j.title);
+  return { version: 1, profile: cleanProfile(value.profile), jobs, roleDirections: cleanRoleDirections(value.roleDirections), feedback: cleanFeedback(value.feedback), cv: cleanCv(value.cv), packs: cleanPacks(value.packs, jobs.map(j => j.id)) };
 }
 export function normalise(value) { return String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}+#]+/gu, ' ').trim(); }
 const skillTerms = {

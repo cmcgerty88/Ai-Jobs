@@ -76,3 +76,8 @@ test('original lowercase passwords still decrypt existing workspaces and backups
   const raw = await seal('{"legacy":true}', { key, salt: Buffer.from(salt).toString('base64') }, now);
   assert.equal((await unseal(raw, password, now)).json, '{"legacy":true}');
 });
+
+test('large multibyte document text cannot produce an unreadable encrypted backup', async () => {
+  const session = await newKey(password);
+  await assert.rejects(seal(JSON.stringify({ notes: '界'.repeat(410000) }), session, now), /Workspace is too large/);
+});
