@@ -52,6 +52,13 @@ function navigate(step) {
 }
 document.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => navigate(Number(button.dataset.step))));
 document.querySelectorAll('[data-back]').forEach(button => button.addEventListener('click', () => navigate(Number(button.dataset.back))));
+$('diagnosis-start').addEventListener('click', event => {
+  event.preventDefault();
+  if (!$('workspace').hidden) { navigate(5); return; }
+  const heading = $('signup-title');
+  heading.focus({ preventScroll: true });
+  heading.scrollIntoView({ behavior: 'instant', block: 'start' });
+});
 profileForm.addEventListener('submit', event => { event.preventDefault(); navigate(2); });
 preferencesForm.addEventListener('submit', event => { event.preventDefault(); navigate(3); });
 
