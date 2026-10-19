@@ -1,6 +1,6 @@
 # RoleBridge
 
-A private device-only pilot for people exploring their next role after redundancy. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
+A private device-only pilot for people exploring their next role after redundancy. The default journey asks for a situation and a short experience summary, then gives one useful next step before offering saving. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
 
 ## Try it
 
@@ -8,15 +8,14 @@ With GitHub Pages configured for `main` → `/ (root)`, the app is served at:
 
 https://cmcgerty88.github.io/Ai-Jobs/
 
-1. Create a private workspace with a strong password (no email/server account), or try without saving. Then choose a PDF, DOCX or TXT CV, or type your experience manually.
-2. Review the CV text, select relevant passages, and add accurate examples and skills to your profile. Skill suggestions are literal text matches, not AI assessments.
-3. Confirm the profile and enter your work preferences.
-4. Open **Explore directions** to see role titles connected to your confirmed skills. Check the explanations, browse the whole library, and save up to five directions. Copy search phrases if useful; no search happens automatically.
-5. Find a real vacancy on an employer's site. Add its link, description and stated conditions. Leave missing information unknown.
-6. Review the reasons to consider, investigate or skip it. Choose next actions for your plan.
-7. Choose **Build CV & interview pack** on a vacancy. Review its tailored draft, add your career details, confirm the facts and download Word, PDF or text. Prepare truthful answers to the role-specific questions and download the interview PDF.
-8. Continue to the dashboard. Record application dates, outcomes and next actions; review the recommendation and its limitations. Return in the same browser to update your progress.
-
+1. Choose **Get my free Job Search Diagnosis**. New visitors start without an account or password; nothing is saved automatically.
+2. Choose the situation closest to yours: unsure which roles to target, applying without interviews, or interviewing without offers.
+3. Enter a recent role and one short example of work. Add demonstrable skills to explore role directions. Optionally open the local CV reader to choose reviewed excerpts and skill labels; the file is never uploaded or automatically added to your profile.
+4. Confirm your experience and choose **Show my next step**. Get one practical experiment, its basis and limits, plus up to two connected role directions when relevant. An unsupported career still gets a useful way to investigate a vacancy, not a negative employability judgement.
+5. Optionally choose **Save my progress** after the result. Explicit consent and a strong password enable encrypted device-only saving. There is no password reset or cloud account. Unsaved work disappears on refresh or close.
+6. Follow the suggested action or open **More tools** for work preferences, role exploration, real-vacancy comparison, CV/interview packs or progress tracking. Work country stays unknown until selected; skipping preferences does not create a false country match or rejection.
+7. Returning users unlock their existing workspace and see **What’s happened since last time?** Update one application or review a next action. Each application’s outcome form opens separately; goal/activity details and optional feedback are collapsed.
+8. Use **Backup, lock or delete** for encrypted backups and deletion. Downloadable CVs/interview packs remain ordinary unencrypted files.
 Follow the [private pilot guide](docs/PRIVATE-PILOT.md) to test this with real users. Read the [privacy/security review and hosted-account gates](docs/PRIVACY-SECURITY-REVIEW.md) before collecting research data or adding external processing.
 
 The original [fictional demo](research/rolebridge-demo.html), [sample PDF](research/rolebridge-sample.pdf), [provisional opportunity report](research/REEMPLOYMENT-OPPORTUNITY-REPORT.md) and [validation kit](research/VALIDATION-KIT.md) remain available.

@@ -70,3 +70,7 @@ test('saved directions are bounded and malformed saved direction fields do not b
   assert.equal(restoreState(serialiseState(state)).roleDirections.length, 5);
   assert.deepEqual(restoreState(JSON.stringify({ ...blankState(), roleDirections: { unexpected: true } })).roleDirections, []);
 });
+
+test('search phrases do not invent a work country when preferences were skipped', () => {
+  assert.equal(prepareSearchTerms(roleById('reporting-analyst'), { country: 'unknown', locations: '', workMode: 'any' })[0], 'reporting analyst');
+});

@@ -1,9 +1,10 @@
+import { expand, tool, chooseSituation, profileEditor, confirmProfile, privacyControl, tracker } from './helpers.mjs';
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
 const storageKey = 'rolebridge.encrypted-workspace.v1';
 const password = 'Synthetic-unrelated-words-only!';
-async function begin(page, url = '/') { await page.goto(url); await page.getByRole('button', { name: 'Try without saving' }).click(); }
+async function begin(page, url = '/') { await page.goto(url); await page.locator('#diagnosis-start').click(); await chooseSituation(page); await profileEditor(page); await expand(page, '#cv-reader'); }
 async function saveWorkspace(page) {
   await page.locator('#save-password').fill(password); await page.locator('#save-password-confirm').fill(password);
   await page.locator('#save-consent').check(); await page.getByRole('button', { name: 'Save my information', exact: true }).click();
@@ -15,8 +16,9 @@ async function completeProfile(page, { stopAtDirections = false } = {}) {
   await page.locator('#currentRole').fill('Customer support team lead');
   await page.locator('#evidence').fill('Led a team of 9. Planned weekly cover and improved customer service reporting.');
   await page.locator('#skills').fill('Excel, customer service');
-  await page.locator('#profile-confirmed').check();
-  await page.getByRole('button', { name: 'Continue to work preferences' }).click();
+  await confirmProfile(page);
+  await page.getByRole('button', { name: 'Show my next step' }).click(); await tool(page, 2);
+  await page.locator('#country').selectOption('GB');
   await page.locator('#minimumSalary').fill('40000');
   await page.locator('#workMode').selectOption('hybrid');
   await page.locator('#maxOfficeDays').selectOption('2');
@@ -81,9 +83,9 @@ test('CV text never leaves the browser and storage requires explicit consent', a
   await unlock(page);
   await expect(page.locator('#name')).toHaveValue('Synthetic Alex');
   await expect(page.locator('#cv-text')).toHaveValue('');
-  await page.getByRole('button', { name: 'Clear my information', exact: true }).click();
+  await privacyControl(page, 'clear-open');
   await page.getByRole('button', { name: 'Clear everything in this app', exact: true }).click();
-  await expect(page.locator('#signup')).toBeVisible();
+  await expect(page.locator('.hero')).toBeVisible();
   expect(await page.evaluate(key => localStorage.getItem(key), storageKey)).toBeNull();
   await expect(page.locator('#name')).toHaveValue('');
   expect(requests.every(request => request.url.startsWith('http://127.0.0.1:8771/') && request.method === 'GET' && !request.body)).toBeTruthy();
@@ -182,12 +184,12 @@ test('saved directions survive encrypted saving and clear removes derived conten
   await page.getByRole('button', { name: 'Save on this device', exact: true }).click();
   await saveWorkspace(page);
   await page.reload(); await unlock(page);
-  await page.locator('#profile-confirmed').check();
-  await page.locator('.steps [data-step="3"]').click();
+  await confirmProfile(page);
+  await tool(page, 3);
   await expect(page.locator('#saved-directions')).toContainText('Service delivery coordinator');
   await page.locator('#role-view').selectOption('saved');
   await expect(page.locator('.role-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Clear my information', exact: true }).click();
+  await privacyControl(page, 'clear-open');
   await page.getByRole('button', { name: 'Clear everything in this app', exact: true }).click();
   await expect(page.locator('#role-list')).toBeEmpty();
   await expect(page.locator('#direction-evidence')).toBeEmpty();
@@ -198,7 +200,7 @@ test('no-match state remains useful, browsing respects the save limit, and profi
   await begin(page); await completeProfile(page, { stopAtDirections: true });
   await page.getByRole('button', { name: 'Review my confirmed skills' }).click();
   await page.locator('#skills').fill('I have no SQL, not Excel');
-  await page.locator('#profile-confirmed').check(); await page.locator('.steps [data-step="3"]').click();
+  await confirmProfile(page); await tool(page, 3);
   await expect(page.locator('.role-card')).toHaveCount(0);
   await expect(page.locator('#role-list')).toContainText('This says nothing about your employability');
   await page.getByRole('button', { name: 'Browse all directions', exact: true }).click();

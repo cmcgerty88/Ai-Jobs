@@ -3,7 +3,7 @@ import { cleanProgress, GOALS } from './progress-model.mjs';
 export const STORAGE_KEY = 'rolebridge.private-profile.v1';
 export const MAX_TEXT = 100_000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const blankProfile = () => ({ name: '', currentRole: '', evidence: '', skills: '', country: 'GB', currency: 'GBP', minimumSalary: '', locations: '', workMode: 'any', maxOfficeDays: '5', hours: 'any', sponsorship: 'unknown', goal: 'clarity', expectedOutcome: '' });
+export const blankProfile = () => ({ name: '', currentRole: '', evidence: '', skills: '', country: 'unknown', currency: 'GBP', minimumSalary: '', locations: '', workMode: 'any', maxOfficeDays: '5', hours: 'any', sponsorship: 'unknown', goal: 'clarity', expectedOutcome: '' });
 export const blankState = () => ({ version: 1, profile: blankProfile(), jobs: [], roleDirections: [], feedback: { useful: '', return: '' }, cv: blankCv(), packs: [] });
 const text = (value, limit = 4000) => typeof value === 'string' ? value.slice(0, limit) : '';
 const choice = (value, options, fallback) => options.includes(value) ? value : fallback;
@@ -11,7 +11,7 @@ export function cleanProfile(value = {}) {
   const p = value && typeof value === 'object' ? value : {};
   return {
     name: text(p.name, 100), currentRole: text(p.currentRole, 160), evidence: text(p.evidence, 12000), skills: text(p.skills, 2000),
-    country: choice(p.country, ['GB', 'IE'], 'GB'), currency: choice(p.currency, ['GBP', 'EUR'], 'GBP'),
+    country: choice(p.country, ['GB', 'IE', 'unknown'], 'unknown'), currency: choice(p.currency, ['GBP', 'EUR'], 'GBP'),
     minimumSalary: numericInput(p.minimumSalary), locations: text(p.locations, 300),
     workMode: choice(p.workMode, ['any', 'remote', 'hybrid', 'onsite'], 'any'),
     maxOfficeDays: choice(String(p.maxOfficeDays), ['0', '1', '2', '3', '4', '5'], '5'),

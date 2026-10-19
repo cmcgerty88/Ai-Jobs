@@ -3,7 +3,8 @@ import { sharedSkills } from './model.mjs';
 export function assessJob(profile, job, now = Date.now()) {
   const failures = [], questions = [], fits = [];
   if (job.status === 'closed') failures.push('You marked the vacancy as closed.');
-  if (job.country === 'unknown') questions.push('Confirm which country this role can be performed in, including remote roles.');
+  if (!['GB', 'IE'].includes(profile.country)) questions.push('Choose the country you want to work in under Work preferences before comparing work-country requirements.');
+  else if (job.country === 'unknown') questions.push('Confirm which country this role can be performed in, including remote roles.');
   else if (job.country !== profile.country) failures.push('The role’s work country differs from your selected country.');
   else fits.push('The stated work country matches.');
 

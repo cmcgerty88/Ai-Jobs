@@ -32,12 +32,23 @@ export function initWorkspace({ getState, setState, start, announce }) {
     $('create-workspace').textContent = encrypted ? 'Unlock workspace' : 'Create private workspace';
     passwordMode(encrypted);
     $('session-only').hidden = encrypted || legacy;
+    $('signup').hidden = !encrypted && !legacy && !$('signup-error').textContent;
+    $('backup-restore').hidden = $('signup').hidden;
   }
-  function enter() {
+  function reveal() {
+    $('signup').hidden = false; $('backup-restore').hidden = false;
+    $('signup-title').focus({ preventScroll: true }); $('signup-title').scrollIntoView({ behavior: 'instant', block: 'start' });
+  }
+  function begin() {
+    // Recheck at the moment of entry, so an existing workspace is never bypassed.
+    try { if (backup || localStorage.getItem(VAULT_KEY) || localStorage.getItem(STORAGE_KEY)) { reveal(); return; } } catch { /* Session-only mode works when storage is unavailable. */ }
+    enter();
+  }
+  function enter(restored = false) {
     active = true; lastActivity = Date.now();
     $('signup').hidden = true; $('restore-panel').hidden = true; $('backup-restore').hidden = true; $('workspace').hidden = false;
     $('signup-form').reset(); $('save-password').value = ''; $('save-password-confirm').value = '';
-    start(); changed();
+    start({ restored }); changed();
   }
   async function write(json) {
     if (!session) return;
@@ -96,13 +107,14 @@ export function initWorkspace({ getState, setState, start, announce }) {
         }
         session = opened.session; expectedRaw = raw; setState(restored); saved = serialiseState(restored); backup = null;
       } else await create($('password').value, $('password-confirm').value, $('workspace-consent').checked);
-      enter();
+      enter(Boolean(raw));
     } catch (error) { $('signup-error').textContent = backup || expectedRaw ? 'Unable to unlock: check your password. The workspace may be damaged or expired.' : error.message; }
     finally { button.disabled = false; $('password').value = ''; $('password-confirm').value = ''; }
   });
-  $('session-only').addEventListener('click', enter);
+  $('session-only').addEventListener('click', begin);
+  $('open-workspace').addEventListener('click', reveal);
   $('load-saved').addEventListener('click', () => {
-    try { setState(restoreState(localStorage.getItem(STORAGE_KEY))); legacyLoaded = true; enter(); $('save-open').click(); }
+    try { setState(restoreState(localStorage.getItem(STORAGE_KEY))); legacyLoaded = true; enter(true); $('save-open').click(); }
     catch { $('signup-error').textContent = 'The older profile cannot be read. Delete the saved copy to start again.'; }
   });
   $('save-open').addEventListener('click', () => {
@@ -171,5 +183,5 @@ export function initWorkspace({ getState, setState, start, announce }) {
     $('backup-file').value = '';
   });
   lockedUI();
-  return { changed };
+  return { changed, begin };
 }

@@ -1,17 +1,20 @@
+import { expand, tool, chooseSituation, profileEditor, confirmProfile, privacyControl, tracker } from './helpers.mjs';
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { unzipSync, strFromU8 } from 'fflate';
 const password = 'Synthetic-pack-password!';
 async function start(page, encrypted = false, prefix = '/') {
-  await page.goto(prefix);
+  await page.goto(prefix); await page.locator('#open-workspace').click();
   if (encrypted) {
     await page.locator('#password').fill(password); await page.locator('#password-confirm').fill(password); await page.locator('#workspace-consent').check(); await page.locator('#create-workspace').click();
   } else await page.locator('#session-only').click();
+  await expect(page.locator('#workspace')).toBeVisible();
+  await chooseSituation(page); await profileEditor(page);
   await page.locator('#name').fill('Synthetic Zoë O’Neill');
   await page.locator('#currentRole').fill('Service coordinator');
   await page.locator('#evidence').fill('Coordinated weekly schedules.\nPrepared Excel reporting for a customer service team.');
   await page.locator('#skills').fill('Scheduling, Excel, customer service');
-  await page.locator('#profile-confirmed').check(); await page.locator('.steps [data-step="4"]').click();
+  await confirmProfile(page); await tool(page, 4);
 }
 async function addJob(page, title = 'Reporting analyst') {
   await page.locator('#add-job').click(); await page.locator('#job-title').fill(title); await page.locator('#job-employer').fill('Synthetic Target Employer');
@@ -69,7 +72,7 @@ test('full private journey produces readable tailored Word/PDF CVs and role-spec
   await expect(page.locator('#save-status')).toContainText('Saved encrypted');
   const raw = await page.evaluate(() => localStorage.getItem('rolebridge.encrypted-workspace.v1')); expect(raw).not.toContain('synthetic@example.com');
   await page.reload(); await page.locator('#password').fill(password); await page.locator('#create-workspace').click(); await expect(page.locator('#workspace')).toBeVisible();
-  await page.locator('#profile-confirmed').check(); await page.locator('.steps [data-step="6"]').click();
+  await confirmProfile(page); await tool(page, 6);
   await expect(page.locator('#cv-email')).toHaveValue('synthetic@example.com'); await expect(page.locator('#answer-introduction')).toHaveValue(/My truthful example/);
   await expect(page.locator('#cv-reviewed')).not.toBeChecked();
   await page.getByRole('button', { name: 'Track this application', exact: true }).click(); await expect(page.locator('#dashboard-title')).toBeVisible();
@@ -96,10 +99,10 @@ test('packs are independent, changed sources preserve edits, and removing a job 
   await expect(page.locator('#draft-summary')).not.toHaveValue('First vacancy custom summary');
   await expect(page.locator('#cv-email')).toHaveValue('synthetic@example.com');
   await page.locator('#pack-job').selectOption({ label: 'Reporting analyst — Synthetic Target Employer' }); await expect(page.locator('#draft-summary')).toHaveValue('First vacancy custom summary');
-  await page.locator('.steps [data-step="1"]').click(); await page.locator('#evidence').fill('Changed truthful evidence for a new application.'); await page.locator('#profile-confirmed').check();
-  await page.locator('.steps [data-step="6"]').click(); await expect(page.locator('#pack-stale')).toBeVisible(); await expect(page.locator('#draft-summary')).toHaveValue('First vacancy custom summary');
-  await page.locator('.steps [data-step="4"]').click(); await page.getByRole('button', { name: 'Remove Reporting analyst', exact: true }).click(); await page.locator('#remove-job-confirm').click();
-  await page.locator('.steps [data-step="6"]').click(); await expect(page.locator('#pack-job option')).toHaveCount(1); await expect(page.locator('#draft-summary')).not.toHaveValue('First vacancy custom summary');
+  await tool(page, 1); await page.locator('#evidence').fill('Changed truthful evidence for a new application.'); await confirmProfile(page);
+  await tool(page, 6); await expect(page.locator('#pack-stale')).toBeVisible(); await expect(page.locator('#draft-summary')).toHaveValue('First vacancy custom summary');
+  await tool(page, 4); await page.getByRole('button', { name: 'Remove Reporting analyst', exact: true }).click(); await page.locator('#remove-job-confirm').click();
+  await tool(page, 6); await expect(page.locator('#pack-job option')).toHaveCount(1); await expect(page.locator('#draft-summary')).not.toHaveValue('First vacancy custom summary');
 });
 
 test('changing interview focus requires committing it and protects existing practice answers', async ({ page }) => {
@@ -127,6 +130,6 @@ test('mobile and project-path hosting support real document downloads, and clear
   await start(page, false, '/Ai-Jobs/'); await addJob(page); await createPack(page); await career(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.locator('#cv-reviewed').check(); const file = await download(page, 'download-cv-pdf'); expect(file.data.subarray(0, 5).toString()).toBe('%PDF-');
-  await page.locator('#clear-open').click(); await page.locator('#clear-confirm').click(); await expect(page.locator('#signup')).toBeVisible();
+  await privacyControl(page, 'clear-open'); await page.locator('#clear-confirm').click(); await expect(page.locator('.hero')).toBeVisible(); await page.locator('#open-workspace').click();
   await expect(page.locator('#cv-preview')).toBeEmpty(); await expect(page.locator('#cv-email')).toHaveValue(''); await expect(page.locator('#interview-questions')).toBeEmpty();
 });

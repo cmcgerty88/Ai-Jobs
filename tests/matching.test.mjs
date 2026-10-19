@@ -65,11 +65,21 @@ test('saved data excludes raw CV content, files and unexpected fields', () => {
 });
 test('stored inputs are constrained and unsafe URLs are removed on restore', () => {
   const restored = restoreState(JSON.stringify({ version: 1, profile: { country: 'invented', minimumSalary: '-20' }, jobs: [{ ...job, url: 'javascript:alert(1)' }] }));
-  assert.equal(restored.profile.country, 'GB'); assert.equal(restored.profile.minimumSalary, ''); assert.equal(restored.jobs[0].url, '');
+  assert.equal(restored.profile.country, 'unknown'); assert.equal(restored.profile.minimumSalary, ''); assert.equal(restored.jobs[0].url, '');
 });
 test('skill extraction detects literal terms, not substrings or an assessment of ability', () => {
   assert.ok(findSkillMentions('Customer support and Excel reporting').includes('Customer service'));
   assert.ok(!findSkillMentions('Excellent work with MySQL').includes('Excel'));
   assert.ok(!findSkillMentions('Excellent work with MySQL').includes('SQL'));
   assert.deepEqual(sharedSkills({ skills: 'Java, SQL' }, { description: 'JavaScript and MySQL' }), []);
+});
+
+test('skipping optional preferences leaves country unknown instead of inventing a match or conflict', () => {
+  for (const country of ['GB', 'IE']) {
+    const result = assessJob({ ...profile, country: blankProfile().country }, { ...job, country }, now);
+    assert.equal(result.status, 'investigate');
+    assert.equal(result.failures.length, 0);
+    assert.match(result.questions.join(' '), /Choose the country/);
+    assert.ok(!result.fits.some(fit => fit.includes('work country')));
+  }
 });

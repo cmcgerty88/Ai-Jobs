@@ -157,7 +157,7 @@ export function exploreRoles(profile, limit = 5) {
 export function prepareSearchTerms(role, profile) {
   // The user copies plain text; there is no automatic search or external URL.
   const place = String(profile.locations || '').trim();
-  const country = profile.country === 'IE' ? 'Ireland' : 'UK';
+  const country = profile.country === 'IE' ? 'Ireland' : profile.country === 'GB' ? 'UK' : '';
   const pattern = profile.workMode === 'remote' ? 'remote' : profile.workMode === 'hybrid' ? 'hybrid' : '';
   return role.terms.map(term => [term, pattern, place || country].filter(Boolean).join(' '));
 }
