@@ -106,6 +106,8 @@ test('popular-site searches encode only a chosen role/location and related title
   assert.equal(new URL(links[0].url).searchParams.get('keywords'), profile.targetRole);
   assert.equal(new URL(links[0].url).searchParams.get('location'), 'Belfast & nearby');
   assert.equal(new URL(links[1].url).searchParams.get('q'), profile.targetRole);
+  assert.equal(new URL(links[2].url).searchParams.get('q'), profile.targetRole);
+  assert.equal(new URL(links[2].url).searchParams.has('keywords'), false);
   assert.equal(new URL(links[2].url).searchParams.get('geo'), 'Belfast & nearby');
   assert.ok(!JSON.stringify(links).includes('PRIVATE_')); assert.ok(!JSON.stringify(links).includes('Excel'));
   assert.equal(new URL(jobSearchLinks('Coordinator')[0].url).searchParams.get('location'), 'United Kingdom');

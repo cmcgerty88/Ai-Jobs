@@ -23,7 +23,7 @@ export function jobSearchLinks(role, location = '') {
   return [
     ['LinkedIn', 'https://www.linkedin.com/jobs/search/', { keywords: title, location: place }],
     ['Indeed', 'https://uk.indeed.com/jobs', { q: title, l: place }],
-    ['CV-Library', 'https://www.cv-library.co.uk/search-jobs', { keywords: title, geo: place }]
+    ['CV-Library', 'https://www.cv-library.co.uk/search-jobs', { q: title, geo: place }]
   ].map(([site, base, parameters]) => {
     const url = new URL(base); for (const [key, value] of Object.entries(parameters)) url.searchParams.set(key, value);
     return { site, url: url.href };

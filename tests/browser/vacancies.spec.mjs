@@ -142,10 +142,15 @@ test('manual vacancy entry is retained alongside popular-site searches and relat
   const linkedin = page.getByRole('link', { name: 'Search LinkedIn', exact: true });
   const url = new URL(await linkedin.getAttribute('href'));
   expect(url.searchParams.get('keywords')).toBe('Operations manager'); expect(url.searchParams.get('location')).toBe('Belfast');
+  const cvLibrary = page.getByRole('link', { name: 'Search CV-Library', exact: true });
+  const cvLibraryUrl = new URL(await cvLibrary.getAttribute('href'));
+  expect(cvLibraryUrl.searchParams.get('q')).toBe('Operations manager');
+  expect(cvLibraryUrl.searchParams.get('geo')).toBe('Belfast');
   await page.locator('#jobsite-role').selectOption({ index: 1 });
   await expect(page.locator('#jobsite-search-summary')).toContainText('Related title');
   const related = await page.locator('#jobsite-role').inputValue();
   expect(new URL(await linkedin.getAttribute('href')).searchParams.get('keywords')).toBe(related);
+  expect(new URL(await cvLibrary.getAttribute('href')).searchParams.get('q')).toBe(related);
   expect(requests.every(r => r.url.startsWith('http://127.0.0.1:8771/'))).toBeTruthy();
   await context.route('https://www.linkedin.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Synthetic search destination</title>' }));
   const popupPromise = page.waitForEvent('popup'); await linkedin.click(); const popup = await popupPromise; await popup.waitForLoadState();
