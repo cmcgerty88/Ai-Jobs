@@ -21,6 +21,9 @@ export function jobSearchLinks(role, location = '') {
   const title = String(role || '').trim().slice(0, 160);
   if (!title) return [];
   const place = String(location || '').trim().slice(0, 300) || 'United Kingdom';
+  const nijobfinder = new URL('https://www.nijobfinder.co.uk/jobs/');
+  nijobfinder.searchParams.set('Keywords', title);
+  nijobfinder.hash = 'browsing';
   return [
     ['LinkedIn', 'https://www.linkedin.com/jobs/search/', { keywords: title, location: place }],
     ['Indeed', 'https://uk.indeed.com/jobs', { q: title, l: place }],
@@ -33,6 +36,6 @@ export function jobSearchLinks(role, location = '') {
       site: 'NIJobs',
       url: `https://www.nijobs.com/jobs/${encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-'))}/in-${encodeURIComponent((String(location || '').trim() || 'Northern Ireland').slice(0, 300).toLowerCase().replace(/\s+/g, '-'))}`
     },
-    { site: 'nijobfinder', url: 'https://www.nijobfinder.co.uk/jobs/', manualSearch: true }
+    { site: 'nijobfinder', url: nijobfinder.href }
   ]);
 }

@@ -112,8 +112,12 @@ test('popular-site searches encode only a chosen role/location and related title
   assert.equal(new URL(links[2].url).searchParams.has('keywords'), false);
   assert.equal(new URL(links[2].url).searchParams.get('geo'), 'Belfast & nearby');
   assert.equal(new URL(links[3].url).pathname, '/jobs/operations-%26-reporting-manager/in-belfast-%26-nearby');
-  assert.equal(links[4].url, 'https://www.nijobfinder.co.uk/jobs/');
-  assert.equal(links[4].manualSearch, true);
+  const finder = new URL(links[4].url);
+  assert.equal(finder.pathname, '/jobs/', 'do not carry over the example link’s transport/warehousing category');
+  assert.equal(finder.searchParams.get('Keywords'), profile.targetRole);
+  assert.deepEqual([...finder.searchParams.keys()], ['Keywords']);
+  assert.equal(finder.hash, '#browsing');
+  assert.equal(jobSearchLinks('Release Manager', 'Belfast')[4].url, 'https://www.nijobfinder.co.uk/jobs/?Keywords=Release+Manager#browsing');
   assert.equal(new URL(jobSearchLinks('Release Manager')[3].url).pathname, '/jobs/release-manager/in-northern-ireland');
   assert.ok(!JSON.stringify(links).includes('PRIVATE_')); assert.ok(!JSON.stringify(links).includes('Excel'));
   assert.equal(new URL(jobSearchLinks('Coordinator')[0].url).searchParams.get('location'), 'United Kingdom');
