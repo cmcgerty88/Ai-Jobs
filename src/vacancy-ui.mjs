@@ -3,7 +3,16 @@ import { jobSearchLinks, searchRoleOptions } from './job-search-links.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, value, className) => { const el = document.createElement(tag); if (value !== undefined) el.textContent = value; if (className) el.className = className; return el; };
 export function initVacancies({ getState, updateSearch, addJob, navigate }) {
-  let pool = null, generation = 0, shown = 10;
+  let pool = null, generation = 0, shown = 10, view = 'matched';
+  function changeView(next) {
+    view = next; shown = 10; render();
+    $('vacancy-pool-status').tabIndex = -1;
+    $('vacancy-pool-status').focus({ preventScroll: true });
+  }
+  function viewButton(label, next) {
+    const button = node('button', label, 'secondary'); button.type = 'button';
+    button.addEventListener('click', () => changeView(next)); return button;
+  }
   function renderBoardLinks() {
     const previous = $('jobsite-role').value;
     const options = searchRoleOptions({ ...getState().profile, targetRole: $('vacancy-target').value }, getState().roleDirections);
@@ -33,12 +42,35 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
       return;
     }
     const profile = getState().profile;
-    const matches = rankVacancies(pool.jobs, profile);
+    const matches = view === 'browse'
+      ? pool.jobs.map(job => ({ job, reasons: ['Unfiltered listing — check whether this role and location suit you.'] }))
+      : rankVacancies(pool.jobs, profile, view === 'all-locations' ? { location: '' } : {});
     const target = profile.targetRole.trim();
-    $('vacancy-pool-status').textContent = `${matches.length} suggestions from ${pool.jobs.length} listings in this limited UK pool. Retrieved ${new Date(pool.fetchedAt).toLocaleString()}.${pool.partial ? ' Some searches failed during the last refresh, so coverage is reduced.' : ''} This is not every UK vacancy or confirmation that an employer is still hiring.`;
+    const count = view === 'browse'
+      ? `Browsing all ${matches.length} listings in this limited UK pool. These are not personalised suggestions.`
+      : `${matches.length} suggestions from ${pool.jobs.length} listings in this limited UK pool.${view === 'all-locations' ? ' Showing role or skill matches across all listed locations.' : ''}`;
+    $('vacancy-pool-status').textContent = `${count} Retrieved ${new Date(pool.fetchedAt).toLocaleString()}.${pool.partial ? ' Some searches failed during the last refresh, so coverage is reduced.' : ''} This is not every UK vacancy or confirmation that an employer is still hiring.`;
     if (profile.country === 'IE') $('vacancy-pool-status').textContent += ' Your work preference is the Republic of Ireland; this first feed covers UK listings only.';
+    if (view !== 'matched') {
+      list.append(node('p', 'This is a temporary view. Your saved target role and location have not changed.', 'hint'));
+      list.append(viewButton('Back to my matches', 'matched'));
+    }
+    if (!pool.jobs.length) {
+      list.append(node('p', 'The feed loaded, but it contains no usable, unexpired listings. Changing your search cannot reveal jobs in an empty pool. Try the job-site searches above or return after the next feed update.', 'notice'));
+      return;
+    }
     if (!matches.length) {
       list.append(node('p', target ? 'No listings in this pool match that title and location. Try a related title or a broader location. A missing match says nothing about your employability.' : 'Enter the role you want, or confirm at least two relevant skills in your experience summary. Suggestions use title words and skill mentions, not an AI assessment.', 'notice'));
+      const elsewhere = rankVacancies(pool.jobs, profile, { location: '' }).length;
+      const actions = node('div', undefined, 'button-row');
+      if (view === 'matched' && profile.locations.trim() && elsewhere) {
+        list.append(node('p', `${elsewhere} role or skill matches are available without the location filter. Locations are matched by words, so a region such as Northern Ireland will not match an advert that only says Belfast.`, 'hint'));
+        actions.append(viewButton(`Show ${elsewhere} matches across all locations`, 'all-locations'));
+      } else if (target) {
+        list.append(node('p', 'The title filter requires most of your target title’s words to appear in the advert title. This limited pool may use different titles or may not cover your role.', 'hint'));
+      }
+      actions.append(viewButton(`Browse all ${pool.jobs.length} listings`, 'browse'));
+      list.append(actions);
       return;
     }
     for (const { job, reasons } of matches.slice(0, shown)) {
@@ -82,7 +114,7 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
     } finally { if (token === generation) $('vacancy-refresh').disabled = false; }
   }
   $('vacancy-search-form').addEventListener('submit', event => {
-    event.preventDefault(); updateSearch($('vacancy-target').value.trim(), $('vacancy-location').value.trim()); shown = 10;
+    event.preventDefault(); updateSearch($('vacancy-target').value.trim(), $('vacancy-location').value.trim()); shown = 10; view = 'matched';
     renderBoardLinks();
     if (pool) render(); else load();
   });
@@ -94,6 +126,6 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
   $('jobsite-role').addEventListener('change', () => renderSelectedBoardLinks());
   return { open() {
     const { profile } = getState(); $('vacancy-target').value = profile.targetRole; $('vacancy-location').value = profile.locations;
-    shown = 10; renderBoardLinks(); load();
+    shown = 10; view = 'matched'; renderBoardLinks(); load();
   } };
 }

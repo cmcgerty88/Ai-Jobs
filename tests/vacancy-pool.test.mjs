@@ -66,8 +66,20 @@ test('collector uses fixed public UK/NI queries, no candidate inputs, and no cre
   assert.equal(result.jobs.length, 1); assert.equal(calls.length, publicQueries().length);
   assert.ok(calls.some(c => c.url.searchParams.get('locationName') === 'Northern Ireland'));
   assert.ok(calls.some(c => c.url.searchParams.get('locationName') === 'United Kingdom'));
+  assert.ok(calls.some(c => c.url.searchParams.get('keywords') === 'release manager' && c.url.searchParams.get('locationName') === 'Northern Ireland'));
   assert.ok(calls.every(c => !c.url.toString().includes('SYNTHETIC_API_KEY') && c.options.redirect === 'error'));
   assert.ok(!JSON.stringify(result).includes('SYNTHETIC_API_KEY'));
+});
+
+test('Release Manager in Belfast is matched when present, without substituting other management roles', () => {
+  const jobs = parsePool(pool([
+    convertListing(listing(1, { jobTitle: 'Senior Release Manager', locationName: 'Belfast' })),
+    convertListing(listing(2, { jobTitle: 'Release Manager', locationName: 'London' })),
+    convertListing(listing(3, { jobTitle: 'Operations Manager', locationName: 'Belfast' }))
+  ]), now).jobs;
+  const profile = { ...blankProfile(), targetRole: 'Release Manager', locations: 'Belfast', skills: 'Excel, scheduling' };
+  assert.deepEqual(rankVacancies(jobs, profile).map(item => item.job.id), ['reed-1']);
+  assert.deepEqual(rankVacancies(jobs, profile, { location: '' }).map(item => item.job.id).sort(), ['reed-1', 'reed-2']);
 });
 
 test('collector fails closed without keys, on rejected credentials, rate limits or total outage; partial coverage is explicit', async () => {

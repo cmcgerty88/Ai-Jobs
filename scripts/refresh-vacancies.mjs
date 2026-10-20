@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { MAX_POOL_JOBS, parsePool, reedUrl } from '../src/vacancy-pool.mjs';
 
 // Fixed public searches only. Never read a candidate profile, CV or browser query.
-export const SEARCH_TOPICS = ['customer service', 'administration', 'operations', 'project coordinator', 'data analyst', 'sales', 'finance', 'human resources', 'IT support', 'engineering', 'healthcare', 'logistics', 'education', 'hospitality', 'retail'];
+export const SEARCH_TOPICS = ['customer service', 'administration', 'operations', 'release manager', 'project coordinator', 'data analyst', 'sales', 'finance', 'human resources', 'IT support', 'engineering', 'healthcare', 'logistics', 'education', 'hospitality', 'retail'];
 export function publicQueries() {
   // Search Northern Ireland explicitly as well as UK-wide, rather than relying only on a national first page.
   return SEARCH_TOPICS.flatMap(keywords => [

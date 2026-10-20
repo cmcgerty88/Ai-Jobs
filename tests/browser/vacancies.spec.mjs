@@ -96,6 +96,42 @@ test('pool hosting in project path, mobile layout and provider text are safe', a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
+test('empty matches explain location exclusions and allow temporary browsing without changing preferences', async ({ page }) => {
+  const requests = []; page.on('request', request => requests.push(request.url()));
+  await page.route('**/data/vacancies.json', route => route.fulfill({ json: sample() }));
+  await begin(page);
+  await filter(page, 'Operations manager', 'Northern Ireland');
+  await expect(page.locator('.vacancy-suggestion')).toHaveCount(0);
+  await expect(page.locator('#vacancy-suggestions')).toContainText('2 role or skill matches');
+  await page.getByRole('button', { name: 'Show 2 matches across all locations', exact: true }).click();
+  await expect(page.locator('.vacancy-suggestion')).toHaveCount(2);
+  await expect(page.locator('#vacancy-pool-status')).toContainText('across all listed locations');
+  await expect(page.locator('#vacancy-location')).toHaveValue('Northern Ireland');
+  await page.getByRole('button', { name: 'Back to my matches', exact: true }).click();
+  await expect(page.locator('.vacancy-suggestion')).toHaveCount(0);
+  await filter(page, 'Neurosurgeon', 'Northern Ireland');
+  await expect(page.locator('#vacancy-suggestions')).toContainText('title filter requires');
+  await page.getByRole('button', { name: 'Browse all 3 listings', exact: true }).click();
+  await expect(page.locator('.vacancy-suggestion')).toHaveCount(3);
+  await expect(page.locator('#vacancy-pool-status')).toContainText('not personalised suggestions');
+  await expect(page.locator('.vacancy-suggestion').first()).toContainText('Unfiltered listing');
+  await page.locator('.vacancy-suggestion').first().getByRole('button', { name: 'Add to my shortlist', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to my matches', exact: true }).click();
+  await tool(page, 1);
+  await expect(page.locator('#targetRole')).toHaveValue('Neurosurgeon');
+  await tool(page, 2); await expect(page.locator('#locations')).toHaveValue('Northern Ireland');
+  await tool(page, 4); await expect(page.locator('#job-list .job-card')).toHaveCount(1);
+  expect(requests.filter(url => url.includes('vacancies.json'))).toEqual(['http://127.0.0.1:8771/data/vacancies.json']);
+  expect(requests.every(url => url.startsWith('http://127.0.0.1:8771/'))).toBeTruthy();
+});
+
+test('a genuinely empty feed does not offer ineffective broader searches', async ({ page }) => {
+  await page.route('**/data/vacancies.json', route => route.fulfill({ json: { ...sample(), jobs: [] } }));
+  await begin(page);
+  await expect(page.locator('#vacancy-suggestions')).toContainText('no usable, unexpired listings');
+  await expect(page.getByRole('button', { name: /Browse all|matches across all locations/ })).toHaveCount(0);
+});
+
 test('manual vacancy entry is retained alongside popular-site searches and related titles without automatic external requests', async ({ page, context }) => {
   const requests = []; context.on('request', r => requests.push({ url: r.url(), referrer: r.headers().referer }));
   await begin(page);

@@ -1,6 +1,6 @@
 # Connect the UK vacancy pool
 
-The matching interface and Reed adapter are built, but **no live source is connected or verified yet**. Development used synthetic API responses. The checked-in `data/vacancies.json` is an explicit empty, unconfigured marker, not sample jobs. No API account, billing account or secret has been created for you. OpenAI is not needed.
+The matching interface and Reed adapter are built. Live listings require a successful configured workflow and Pages deployment; use the run summary and the site's listing count to check your deployment. Automated development tests use synthetic API responses. The checked-in `data/vacancies.json` is an explicit empty, unconfigured marker, not the deployed feed or sample jobs. A successful collection replaces it only in the deployment artifact. OpenAI is not needed.
 
 ## LinkedIn, Indeed and CV-Library
 
@@ -27,10 +27,10 @@ Open the latest **Publish UK vacancy pool** run and read its summary. A green ru
 - **Feed was not published:** add `REED_API_KEY` as a repository **Actions secret**, not a repository variable. The configuration job cannot read environment-only secrets. Then rerun the workflow.
 - **Collected 0 listings:** the generated pool is empty. Check the provider response/collector before changing candidate filters.
 - **Collected listings, but the site says “not connected”:** confirm the deployment step succeeded, Pages Source is **GitHub Actions**, and you opened the deployed GitHub Pages site rather than a local or downloaded copy. Refresh the page.
-- **“0 suggestions from [a positive number] listings”:** the feed loaded, but the title, confirmed skills or location filters found no matches. Try a shorter target title and leave location blank as a diagnostic. The pool is limited; this does not establish that no suitable jobs exist.
+- **“0 suggestions from [a positive number] listings”:** the feed loaded, but the title, confirmed skills or location filters found no matches. The site offers a temporary view of matching roles across all locations when available, or **Browse all listings** to inspect the pool without matching filters. These views do not change saved preferences; unfiltered jobs are explicitly not personalised suggestions. Region names are not mapped to towns (for example, Northern Ireland will not match a listing that only says Belfast). Try a shorter target title or a town name for a new search. The pool is limited; this does not establish that no suitable jobs exist.
 - **Pool stale or could not load:** check the latest collection/deployment and the site's `data/vacancies.json` response. Do not paste API keys or candidate data into troubleshooting messages.
 
-The collector performs 30 fixed public searches: 15 broad job topics, each with a UK-wide and an explicit Northern Ireland query. It requests the first 50 results from each search, deduplicates job IDs and caps the snapshot at 1,000 listings. See `SEARCH_TOPICS` and `publicQueries()` in `scripts/refresh-vacancies.mjs` for the exact scope. These searches are independent of all candidate inputs.
+The collector performs 32 fixed public searches: 16 job topics, including release management, each with a UK-wide and an explicit Northern Ireland query. It requests the first 50 results from each search, deduplicates job IDs and caps the snapshot at 1,000 listings. See `SEARCH_TOPICS` and `publicQueries()` in `scripts/refresh-vacancies.mjs` for the exact scope. Every visitor receives this same pool; the collector does not receive candidate profiles or search-form inputs.
 
 This is a limited pool, not an exhaustive index of UK jobs. Availability in a particular town, occupation or seniority is not guaranteed. Northern Ireland is queried explicitly, but actual regional coverage must be checked once the provider is connected. Country-based search scope is not proof of work authorisation or where a remote role can be performed. Imported jobs leave work-country eligibility, salary units, sponsorship, essentials, working pattern and vacancy status unknown until reviewed.
 
