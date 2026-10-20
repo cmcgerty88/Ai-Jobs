@@ -1,5 +1,7 @@
 import { blankCv, cleanCv, cleanPacks } from './application-data.mjs';
 import { cleanProgress, GOALS } from './progress-model.mjs';
+import { normalise } from './skills.mjs';
+export { normalise, findSkillMentions } from './skills.mjs';
 export const STORAGE_KEY = 'rolebridge.private-profile.v1';
 export const MAX_TEXT = 100_000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -64,21 +66,7 @@ export function restoreState(raw) {
   const jobs = value.jobs.slice(0, 30).map(cleanJob).filter(j => j.id && j.title);
   return { version: 1, profile: cleanProfile(value.profile), jobs, roleDirections: cleanRoleDirections(value.roleDirections), feedback: cleanFeedback(value.feedback), cv: cleanCv(value.cv), packs: cleanPacks(value.packs, jobs.map(j => j.id)) };
 }
-export function normalise(value) { return String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}+#]+/gu, ' ').trim(); }
-const skillTerms = {
-  'Customer service': ['customer service', 'customer support'], 'Team leadership': ['team leader', 'team leadership', 'team management'],
-  'Excel': ['excel'], 'Zendesk': ['zendesk'], 'Salesforce': ['salesforce'], 'Project management': ['project management'],
-  'Scheduling': ['scheduling', 'rota planning'], 'Reporting': ['reporting'], 'Recruitment': ['recruitment', 'recruiting'],
-  'Training': ['training'], 'Sales': ['sales'], 'Account management': ['account management'], 'SQL': ['sql'],
-  'Python': ['python'], 'Power BI': ['power bi'], 'Budgeting': ['budgeting', 'budget management'],
-  'Process improvement': ['process improvement'], 'Stakeholder management': ['stakeholder management'],
-  'Administration': ['administration', 'administrative'], 'Logistics': ['logistics'], 'Operations': ['operations'],
-  'Microsoft 365': ['microsoft 365', 'office 365'], 'Communication': ['communication'], 'Data analysis': ['data analysis']
-};
 export function hasPhrase(haystack, needle) { return (` ${normalise(haystack)} `).includes(` ${normalise(needle)} `); }
-export function findSkillMentions(source) {
-  return Object.entries(skillTerms).filter(([, terms]) => terms.some(term => hasPhrase(source, term))).map(([name]) => name);
-}
 export function sharedSkills(profile, job) {
   return [...new Set(profile.skills.split(/[,;\n]/).map(s => s.trim()).filter(Boolean))].filter(skill => hasPhrase(job.description, skill));
 }

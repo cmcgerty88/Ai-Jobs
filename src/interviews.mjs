@@ -1,6 +1,31 @@
 // Editorial practice prompts, not questions obtained from an employer.
 // Keys follow the existing role library; no inferred candidate qualifications.
 export const ROLE_QUESTIONS = {
+  'release-manager': [
+    ['How do you decide whether a release is ready to proceed?', 'Explain readiness evidence, dependencies, approvals and who owns the go/no-go decision.'],
+    ['Tell me about a release that needed to be delayed or rolled back.', 'Describe the risk, communication, recovery plan and what you learned; use an example you actually experienced.'],
+    ['How would you coordinate releases across several teams?', 'Discuss scheduling, conflicting dependencies, environments and transparent ownership.']
+  ],
+  'it-change-manager': [
+    ['How would you assess a proposed technology change?', 'Cover impact, risk, testing, recovery and appropriate approval authority.'],
+    ['How would you handle an emergency change?', 'Explain proportionate controls, communication and follow-up review without assuming every organisation uses the same process.'],
+    ['Tell me about improving an IT change process.', 'Describe the evidence, your contribution and how you balanced safety with delivery speed.']
+  ],
+  'technical-delivery-manager': [
+    ['How do you manage dependencies between engineering teams?', 'Explain owners, visibility, prioritisation and escalation with a real example.'],
+    ['Tell me about a difficult technical delivery trade-off.', 'Separate your coordination responsibility from architecture decisions owned by others.'],
+    ['How would you communicate a delivery forecast that has changed?', 'Describe uncertainty, options and how you would agree priorities with stakeholders.']
+  ],
+  'operations-manager': [
+    ['How would you identify the most important operational improvement?', 'Explain service measures, constraints and how you would check the effect of a change.'],
+    ['Tell me about balancing people, service quality and cost.', 'Describe your actual authority and the trade-offs without inventing financial results.'],
+    ['How would you handle a serious disruption to daily operations?', 'Cover immediate priorities, communication, recovery and lessons learned.']
+  ],
+  'project-manager': [
+    ['How do you establish a realistic project plan?', 'Discuss scope, assumptions, estimates, dependencies and agreement with the delivery team.'],
+    ['Tell me about a project whose scope or budget changed.', 'Explain how you assessed the impact and obtained the necessary decisions.'],
+    ['How would you manage a major delivery risk?', 'Describe evidence, ownership, mitigation and when you would escalate.']
+  ],
   'service-delivery-coordinator': [
     ['How would you handle an urgent service request involving several teams?', 'Explain ownership, prioritisation, updates and how you would confirm resolution.'],
     ['Tell me about a service escalation you helped resolve.', 'Separate your actions from the team’s work and describe the outcome you can substantiate.'],

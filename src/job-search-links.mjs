@@ -10,7 +10,8 @@ export function searchRoleOptions(profile, savedDirections = []) {
     seen.add(key); options.push({ title, reason });
   };
   if (profile.targetRole?.trim()) add(profile.targetRole.trim().slice(0, 160), 'Your target role');
-  for (const match of exploreRoles(profile, 2)) add(match.role.title, 'Related title to explore: ' + match.matches.map(m => m.supplied).join(', '));
+  else if (profile.currentRole?.trim()) add(profile.currentRole.trim().slice(0, 160), 'Your current role');
+  for (const match of exploreRoles(profile, 3)) add(match.role.title, 'Related title to explore. ' + match.context.reason + (match.matches.length ? ' Confirmed skills: ' + match.matches.map(m => m.supplied).join(', ') : ' Review the requirements before applying.'));
   for (const id of savedDirections) {
     const role = roleById(id); if (role) add(role.title, 'A direction you saved to explore');
   }

@@ -99,8 +99,10 @@ test('popular-site searches encode only a chosen role/location and related title
   const { jobSearchLinks, searchRoleOptions } = await import('../src/job-search-links.mjs');
   const profile = { ...blankProfile(), targetRole: 'Operations & reporting manager', name: 'PRIVATE_NAME', evidence: 'PRIVATE_CV', skills: 'Customer service, Excel' };
   const options = searchRoleOptions(profile);
-  assert.equal(options[0].title, profile.targetRole); assert.equal(options.length, 2);
-  assert.ok(options.slice(1).every(o => o.reason.includes('Related title')));
+  assert.equal(options[0].title, profile.targetRole); assert.equal(options.length, 1, 'generic customer service skills must not redirect a manager to a support occupation');
+  const related = searchRoleOptions({ ...profile, targetRole: 'Release Manager', skills: 'Release planning, ITIL, IT change control, CI/CD, Stakeholder management' });
+  assert.equal(related[0].title, 'Release Manager');
+  assert.ok(related.slice(1).every(o => o.reason.includes('Related title') && /change|delivery/i.test(o.title)));
   const links = jobSearchLinks(options[0].title, 'Belfast & nearby');
   assert.deepEqual(links.map(l => new URL(l.url).hostname), ['www.linkedin.com', 'uk.indeed.com', 'www.cv-library.co.uk']);
   assert.equal(new URL(links[0].url).searchParams.get('keywords'), profile.targetRole);

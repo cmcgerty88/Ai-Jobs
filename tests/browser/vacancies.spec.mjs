@@ -137,14 +137,15 @@ test('manual vacancy entry is retained alongside popular-site searches and relat
   await begin(page);
   await expect(page.locator('#vacancy-pool-status')).toContainText('not connected yet');
   await expect(page.locator('#jobsite-title')).toHaveText('Search LinkedIn, Indeed and CV-Library');
+  await page.locator('#vacancy-target').fill('Customer support coordinator');
   await expect(page.locator('#jobsite-role option')).toHaveCount(3);
   await page.locator('#vacancy-location').fill('Belfast');
   const linkedin = page.getByRole('link', { name: 'Search LinkedIn', exact: true });
   const url = new URL(await linkedin.getAttribute('href'));
-  expect(url.searchParams.get('keywords')).toBe('Operations manager'); expect(url.searchParams.get('location')).toBe('Belfast');
+  expect(url.searchParams.get('keywords')).toBe('Customer support coordinator'); expect(url.searchParams.get('location')).toBe('Belfast');
   const cvLibrary = page.getByRole('link', { name: 'Search CV-Library', exact: true });
   const cvLibraryUrl = new URL(await cvLibrary.getAttribute('href'));
-  expect(cvLibraryUrl.searchParams.get('q')).toBe('Operations manager');
+  expect(cvLibraryUrl.searchParams.get('q')).toBe('Customer support coordinator');
   expect(cvLibraryUrl.searchParams.get('geo')).toBe('Belfast');
   await page.locator('#jobsite-role').selectOption({ index: 1 });
   await expect(page.locator('#jobsite-search-summary')).toContainText('Related title');

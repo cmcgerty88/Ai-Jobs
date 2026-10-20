@@ -13,11 +13,15 @@ test('connected directions explain only the distinct skills actually confirmed',
 
 test('a job title, raw CV or experience paragraph never silently creates confirmed skills', () => {
   const candidates = [
-    { skills: '', currentRole: 'SQL reporting analyst', evidence: 'Excel SQL reporting and data analysis', rawCv: 'SQL Excel' },
+    { skills: '', evidence: 'Excel SQL reporting and data analysis', rawCv: 'SQL Excel' },
     { skills: 'I have no SQL, not Excel, excellent communication' },
     { skills: 'MySQL, JavaScript' }
   ];
   for (const candidate of candidates) assert.deepEqual(exploreRoles(candidate), []);
+  const titleOnly = exploreRoles({ skills: '', currentRole: 'SQL reporting analyst', rawCv: 'SQL Excel' });
+  assert.equal(titleOnly[0].role.id, 'reporting-analyst');
+  assert.deepEqual(titleOnly[0].matches, []);
+  assert.equal(titleOnly[0].context.direct, true);
 });
 
 test('generic overlap and a single skill are not enough to suggest a role', () => {
@@ -39,8 +43,8 @@ test('ranking is bounded, reproducible and independent of name, country and sala
 });
 
 test('the editorial catalogue has unique ids and actionable prompts without advertised jobs or pay', () => {
-  assert.equal(ROLE_CATALOGUE.length, 12);
-  assert.equal(new Set(ROLE_CATALOGUE.map(role => role.id)).size, 12);
+  assert.equal(ROLE_CATALOGUE.length, 17);
+  assert.equal(new Set(ROLE_CATALOGUE.map(role => role.id)).size, ROLE_CATALOGUE.length);
   for (const role of ROLE_CATALOGUE) {
     assert.ok(role.signals.some(signal => signal.core));
     assert.ok(role.checks.length >= 2); assert.ok(role.terms.length >= 2); assert.ok(role.example.length > 20);

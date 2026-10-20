@@ -8,8 +8,8 @@ async function begin(page, goal = 'clarity') {
   await expect(page.locator('#step-0')).toBeVisible();
   await page.locator(`[data-goal="${goal}"]`).click();
 }
-async function experience(page, skills = 'customer service, Excel, scheduling') {
-  await page.locator('#currentRole').fill('Synthetic coordinator');
+async function experience(page, skills = 'customer service, Excel, scheduling', currentRole = 'Customer support coordinator') {
+  await page.locator('#currentRole').fill(currentRole);
   await page.locator('#evidence').fill('Prepared weekly reports and coordinated customer service schedules.');
   await page.locator('#skills').fill(skills);
   await page.locator('#profile-confirmed').check();
@@ -58,7 +58,7 @@ test('CV-assisted result saves only reviewed details after consent and returns t
     const { unseal } = await import('/src/vault.mjs');
     return (await unseal(localStorage.getItem(key), password)).json;
   }, { key, password });
-  expect(json).toContain('Synthetic coordinator'); expect(json).not.toContain('PRIVATE_RAW_MARKER');
+  expect(json).toContain('Customer support coordinator'); expect(json).not.toContain('PRIVATE_RAW_MARKER');
   await page.reload(); await page.locator('#diagnosis-start').click();
   await expect(page.locator('#workspace')).toBeHidden();
   await expect(page.locator('#create-workspace')).toHaveText('Unlock workspace');
@@ -67,7 +67,7 @@ test('CV-assisted result saves only reviewed details after consent and returns t
   await expect(page.locator('#dashboard-title')).toHaveText('What’s happened since last time?');
   await expect(page.locator('#cv-text')).toHaveValue('');
   // An existing saved profile can be edited without losing its previous details.
-  await tool(page, 1); await expect(page.locator('#currentRole')).toHaveValue('Synthetic coordinator');
+  await tool(page, 1); await expect(page.locator('#currentRole')).toHaveValue('Customer support coordinator');
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
   await tool(page, 4); await page.locator('#add-job').click();
   await page.locator('#job-title').fill('Synthetic role'); await page.locator('#job-employer').fill('Synthetic employer');
@@ -89,14 +89,14 @@ test('CV-assisted result saves only reviewed details after consent and returns t
 
 test('unsupported career still gets an action; mobile can change situation without losing experience', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await begin(page); await experience(page, 'neurosurgery');
+  await begin(page); await experience(page, 'neurosurgery', 'Neurosurgeon');
   await expect(page.locator('#first-plan-basis')).toContainText('nothing about your employability');
   await expect(page.locator('#first-plan-continue')).toHaveText('Find suggested vacancies');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.getByRole('button', { name: 'Edit my answers' }).click();
   await page.getByRole('button', { name: 'Change my situation' }).click();
   await page.locator('[data-goal="offers"]').click();
-  await expect(page.locator('#currentRole')).toHaveValue('Synthetic coordinator');
+  await expect(page.locator('#currentRole')).toHaveValue('Neurosurgeon');
   await expect(page.locator('#profile-confirmed')).not.toBeChecked();
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
   await expect(page.locator('#first-plan-action')).toContainText('Practise');

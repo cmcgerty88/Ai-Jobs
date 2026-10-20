@@ -1,7 +1,8 @@
 import { initApplicationPack } from './application-ui.mjs';
 import { firstPlan } from './first-plan.mjs';
 import { initVacancies } from './vacancy-ui.mjs';
-import { blankState, cleanProfile, cleanJob, safeJobUrl, findSkillMentions } from './model.mjs';
+import { skillEvidence, canonicalSkill } from './skills.mjs';
+import { blankState, cleanProfile, cleanJob, safeJobUrl } from './model.mjs';
 import { initWorkspace } from './workspace.mjs';
 import { diagnose, STAGES, GOALS, cleanProgress, progressError } from './progress.mjs';
 import { assessJob } from './matching.mjs';
@@ -97,10 +98,11 @@ function renderFirstPlan() {
   button.textContent = findVacancies ? 'Find suggested vacancies' : plan.action;
   button.onclick = () => navigate(findVacancies ? 8 : plan.step);
   const list = $('first-plan-roles'); list.replaceChildren();
-  if (plan.roles.length) list.append(node('h3', 'Directions connected to your skills'));
-  for (const { role, matches } of plan.roles) {
+  if (plan.roles.length) list.append(node('h3', 'Directions for your role focus'));
+  for (const { role, matches, context } of plan.roles) {
     const card = node('article', undefined, 'card'); card.append(node('h4', role.title));
-    card.append(node('p', 'Connected by: ' + matches.map(match => match.supplied).join(', '), 'small'));
+    card.append(node('p', context.reason, 'small'));
+    card.append(node('p', matches.length ? 'Confirmed skill connections: ' + matches.map(match => match.supplied).join(', ') : 'No skills have been inferred from your job title. Check the requirements against your experience.', 'small'));
     card.append(node('p', role.checks[0], 'hint')); list.append(card);
   }
 }
@@ -111,7 +113,7 @@ function renderSavedDirections() {
   if (!chosen.length) { list.append(node('li', 'No directions saved yet.', 'muted small')); return; }
   for (const role of chosen) {
     const item = node('li'); item.append(node('strong', role.title));
-    if (!matchRole(state.profile, role).relevant) item.append(node('p', 'Saved to explore; not currently connected by the library’s skill rules.', 'hint'));
+    if (!matchRole(state.profile, role).relevant) item.append(node('p', 'Saved to explore; not currently connected to your role focus and confirmed skills.', 'hint'));
     const remove = node('button', 'Remove', 'text-button'); remove.type = 'button'; remove.setAttribute('aria-label', `Remove saved direction ${role.title}`);
     remove.addEventListener('click', () => { state.roleDirections = state.roleDirections.filter(id => id !== role.id); renderDirections(); setSaveStatus(); $('role-view').focus(); });
     item.append(remove); list.append(item);
@@ -129,8 +131,8 @@ function renderDirections() {
   const list = $('role-list'); list.replaceChildren();
   if (!results.length) {
     const empty = node('div', undefined, 'empty-state');
-    empty.append(node('h3', query ? 'No directions match this filter.' : filter === 'saved' ? 'Your exploration list is empty.' : 'No directions connected by these skill rules yet.'));
-    empty.append(node('p', 'This says nothing about your employability. The library is small and recognises specific skill labels. You can review your confirmed skills or browse all directions.'));
+    empty.append(node('h3', query ? 'No directions match this filter.' : filter === 'saved' ? 'Your exploration list is empty.' : 'No supported directions for your role focus yet.'));
+    empty.append(node('p', 'This says nothing about your employability. We prioritise your target role, or your current role if no target is entered. The library may not cover that occupation or wording. Review your titles and confirmed skills, search vacancies for your chosen role, or browse the library.'));
     const browse = node('button', 'Browse all directions', 'secondary'); browse.type = 'button'; browse.addEventListener('click', () => { $('role-view').value = 'all'; $('role-search').value = ''; renderDirections(); $('role-view').focus(); }); empty.append(browse); list.append(empty);
   }
   for (const result of results) {
@@ -138,7 +140,7 @@ function renderDirections() {
     const card = node('article', undefined, 'role-card'); card.dataset.roleId = role.id;
     const header = node('div', undefined, 'job-header');
     const title = node('div'); title.append(node('p', role.category, 'eyebrow'), node('h3', role.title));
-    header.append(title, node('span', result.relevant ? 'Skill connections' : 'Browse to explore', 'badge ' + (result.relevant ? 'consider' : 'investigate'))); card.append(header, node('p', role.description, 'muted small'));
+    header.append(title, node('span', result.context.direct ? 'Role title connection' : result.relevant ? 'Role & skill connections' : 'Browse to explore', 'badge ' + (result.relevant ? 'consider' : 'investigate'))); card.append(header, node('p', role.description, 'muted small'), node('p', result.context.reason, 'hint'));
     if (matches.length) {
       card.append(node('h4', 'Connections to skills you confirmed'));
       const connections = node('ul', undefined, 'role-connections');
@@ -181,21 +183,28 @@ $('role-view').addEventListener('change', renderDirections);
 $('role-search').addEventListener('input', renderDirections);
 
 function showSkillSuggestions() {
-  const mentions = findSkillMentions($('cv-text').value);
+  const mentions = skillEvidence($('cv-text').value);
   const container = $('skill-chips'); container.replaceChildren();
   $('skill-suggestions').hidden = false;
-  if (!mentions.length) { container.append(node('p', 'No common skill terms were detected. Add your own skills to the profile; this is not a judgement about your experience.', 'hint')); return; }
-  const existing = new Set($('skills').value.split(/[,;\n]/).map(value => value.trim().toLowerCase()));
-  for (const skill of mentions) {
+  container.append(node('p', `${mentions.length} skill suggestions found. Review each one; add missing skills in “Skills you can demonstrate”. This vocabulary cannot recognise every skill or establish your proficiency.`, 'hint'));
+  if (!mentions.length) return;
+  const existing = new Set($('skills').value.split(/[,;\n]/).map(value => canonicalSkill(value).toLowerCase()));
+  const evidence = node('details'); evidence.append(node('summary', 'See the CV text behind these suggestions'));
+  const excerpts = node('ul');
+  for (const { name: skill, snippet } of mentions) {
     const button = node('button', skill); button.type = 'button'; button.setAttribute('aria-pressed', String(existing.has(skill.toLowerCase())));
     button.addEventListener('click', () => {
       const skills = $('skills').value.split(/[,;\n]/).map(value => value.trim()).filter(Boolean);
-      const found = skills.findIndex(value => value.toLowerCase() === skill.toLowerCase());
+      const found = skills.findIndex(value => canonicalSkill(value).toLowerCase() === skill.toLowerCase());
       if (found === -1) skills.push(skill); else skills.splice(found, 1);
+      if (skills.join(', ').length > 2000) { announce('Your skills field is full. Remove a less relevant skill before adding another.'); return; }
       $('skills').value = skills.join(', '); button.setAttribute('aria-pressed', String(found === -1)); profileChanged();
     });
     container.append(button);
+    const item = node('li'); item.append(node('strong', skill + ': '), document.createTextNode(snippet)); excerpts.append(item);
   }
+  evidence.append(node('p', 'Extracted text with case and spacing normalised. These excerpts stay with the raw CV in this tab and are not saved to your profile.', 'hint'), excerpts);
+  container.append(evidence);
 }
 $('clear-cv').addEventListener('click', () => { fileGeneration++; $('cv-text').value = ''; $('cv-file').value = ''; $('cv-text').disabled = false; $('cv-file').disabled = false; $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; $('cv-status').textContent = 'Raw CV cleared. Your reviewed profile is unchanged.'; });
 $('find-skills').addEventListener('click', showSkillSuggestions);

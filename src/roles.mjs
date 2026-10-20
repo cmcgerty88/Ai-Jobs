@@ -1,8 +1,9 @@
-import { normalise } from './model.mjs';
+import { normalise, hasPhrase } from './model.mjs';
+import { canonicalSkill } from './skills.mjs';
 
 // A small, editorial catalogue for exploration, not an occupational standard,
 // qualification assessment, vacancy feed, or representation of market demand.
-export const CATALOGUE_VERSION = '2026-10-18';
+export const CATALOGUE_VERSION = '2026-10-20';
 const aliases = {
   service: ['Customer service', 'Customer support'],
   leadership: ['Team leadership', 'Team management', 'People management', 'Team leader'],
@@ -24,7 +25,16 @@ const aliases = {
   data: ['Data analysis', 'Data analytics'],
   sql: ['SQL', 'Structured query language'],
   bi: ['Power BI', 'Tableau', 'Business intelligence'],
-  logistics: ['Logistics', 'Supply chain', 'Inventory management']
+  logistics: ['Logistics', 'Supply chain', 'Inventory management'],
+  release: ['Release management', 'Deployment management'],
+  change: ['IT change management', 'Change control', 'Service transition'],
+  itil: ['ITIL', 'IT service management'],
+  delivery: ['CI/CD', 'DevOps', 'SDLC'],
+  agile: ['Agile', 'Scrum', 'Kanban', 'SAFe'],
+  risk: ['Risk management', 'RAID management', 'Dependency management'],
+  budget: ['Budgeting'],
+  tools: ['Jira', 'Azure DevOps', 'ServiceNow'],
+  testing: ['User acceptance testing', 'Regression testing', 'Software testing', 'Rollback planning']
 };
 const signal = (key, connection, core = false) => ({ key, connection, core });
 
@@ -124,26 +134,101 @@ export const ROLE_CATALOGUE = [
     checks: ['The level of line-management experience expected, including performance management and hiring.', 'Required sector or technical knowledge, team size and shift responsibilities.'],
     example: 'Describe how you supported a colleague or team, including your actual authority and the outcome.',
     terms: ['customer support team lead', 'customer service team leader', 'support team supervisor']
+  },
+  {
+    id: 'release-manager', title: 'Release manager', category: 'Technology delivery',
+    description: 'Plan and coordinate software releases, readiness checks, dependencies and safe production changes.',
+    signals: [signal('release', 'connects to coordinating releases and deployments', true), signal('change', 'supports approval and change control', true), signal('delivery', 'supports understanding the delivery lifecycle'), signal('risk', 'supports managing release risks and dependencies'), signal('stakeholders', 'supports cross-team readiness decisions'), signal('testing', 'supports testing and recovery planning'), signal('tools', 'supports delivery tracking')],
+    checks: ['Whether this is release coordination or a hands-on engineering role requiring scripting and pipeline ownership.', 'The scale of releases, change approvals, deployment windows and on-call responsibilities.'],
+    example: 'Describe a release you coordinated: dependencies, readiness criteria, your decision-making authority and the outcome.',
+    terms: ['release manager', 'software release manager', 'release and deployment manager']
+  },
+  {
+    id: 'it-change-manager', title: 'IT change manager', category: 'Technology delivery',
+    description: 'Coordinate technology change assessment, approvals, scheduling and post-change review.',
+    signals: [signal('change', 'connects to assessing and controlling IT changes', true), signal('itil', 'supports service-management practices', true), signal('risk', 'supports evaluating impact and recovery'), signal('release', 'supports change and release coordination'), signal('stakeholders', 'supports decision-making across teams')],
+    checks: ['Whether the advert concerns IT service changes or organisational change; these require different experience.', 'The expected ITIL knowledge, approval authority and emergency-change responsibilities.'],
+    example: 'Prepare an example of a technology change you assessed, including the risk, decision and post-change review.',
+    terms: ['IT change manager', 'technology change manager', 'change and release manager']
+  },
+  {
+    id: 'technical-delivery-manager', title: 'Technical delivery manager', category: 'Technology delivery',
+    description: 'Coordinate technology delivery across teams, dependencies, risks and stakeholders.',
+    signals: [signal('projects', 'supports planning and coordinating delivery', true), signal('delivery', 'connects to software delivery practices', true), signal('agile', 'supports iterative planning'), signal('risk', 'supports dependency and risk management'), signal('stakeholders', 'supports expectations and delivery decisions')],
+    checks: ['The depth of engineering knowledge and responsibility for architecture or people management.', 'Whether commercial ownership, supplier management or a particular delivery method is essential.'],
+    example: 'Explain a technical delivery you coordinated, including dependencies, trade-offs and what you personally owned.',
+    terms: ['technical delivery manager', 'software delivery manager', 'IT delivery manager']
+  },
+  {
+    id: 'operations-manager', title: 'Operations manager', category: 'Service & operations',
+    description: 'Manage operational processes, resources, service performance and improvement.',
+    signals: [signal('operations', 'connects to running operational processes', true), signal('leadership', 'supports responsibility for people and performance', true), signal('process', 'supports improving operational work'), signal('budget', 'supports resource decisions'), signal('reporting', 'supports performance review')],
+    checks: ['The industry, location and operational systems required; office and manufacturing operations differ.', 'The team size, budget authority, safety duties and level of responsibility.'],
+    example: 'Prepare an example of improving an operation, specifying your authority, constraints and a verifiable result.',
+    terms: ['operations manager', 'business operations manager', 'service operations manager']
+  },
+  {
+    id: 'project-manager', title: 'Project manager', category: 'Projects & administration',
+    description: 'Plan and manage project scope, milestones, risks, resources and stakeholder decisions.',
+    signals: [signal('projects', 'connects to managing project work', true), signal('risk', 'supports managing delivery uncertainty', true), signal('stakeholders', 'supports decisions and expectations'), signal('budget', 'supports financial control'), signal('agile', 'supports iterative delivery where appropriate')],
+    checks: ['The required sector expertise, qualifications and responsibility for scope and budget.', 'Whether this is technical, construction, business-change or another specialist project role.'],
+    example: 'Describe a project you owned, including scope, trade-offs, your decisions and the result.',
+    terms: ['project manager', 'business project manager', 'IT project manager']
   }
 ];
 
 export function roleById(id) { return ROLE_CATALOGUE.find(role => role.id === id); }
+
+const families = {
+  'service-delivery-coordinator': 'service', 'customer-success-associate': 'service', 'customer-support-lead': 'service', 'workforce-scheduler': 'service',
+  'operations-coordinator': 'operations', 'operations-manager': 'operations',
+  'project-coordinator': 'projects', 'project-manager': 'projects',
+  'sales-support-coordinator': 'sales', 'training-coordinator': 'learning',
+  'recruitment-coordinator': 'recruitment', 'administrative-coordinator': 'administration',
+  'reporting-analyst': 'data', 'logistics-coordinator': 'logistics',
+  'release-manager': 'technology', 'it-change-manager': 'technology', 'technical-delivery-manager': 'technology'
+};
+const familyTerms = {
+  technology: ['release', 'deployment', 'technical delivery', 'software delivery', 'IT delivery', 'IT change', 'technology change'],
+  service: ['customer service', 'customer support', 'customer success', 'service coordinator', 'service delivery coordinator', 'workforce', 'resource scheduling'],
+  operations: ['operations'], projects: ['project', 'programme', 'program manager'],
+  sales: ['sales'], learning: ['training', 'learning and development'], recruitment: ['recruitment', 'recruiting', 'talent acquisition'],
+  administration: ['administrative', 'administrator', 'office coordinator'], data: ['data', 'reporting', 'MI analyst', 'business intelligence'],
+  logistics: ['logistics', 'supply chain', 'transport']
+};
+const level = title => /\b(?:director|head|chief)\b/.test(normalise(title)) ? 3
+  : /\b(?:manager|lead|leader|supervisor)\b/.test(normalise(title)) ? 2 : 1;
+export function directionContext(profile, role) {
+  const target = String(profile.targetRole || '').trim();
+  const title = target || String(profile.currentRole || '').trim();
+  const basis = target ? 'target role' : 'current role';
+  if (!title) return { compatible: true, direct: false, reason: 'Based on your confirmed skills; no role focus was entered.' };
+  const direct = role.terms.some(term => hasPhrase(title, term));
+  const exactFamily = ROLE_CATALOGUE.filter(item => item.terms.some(term => hasPhrase(title, term))).map(item => families[item.id]);
+  const focus = exactFamily.length ? exactFamily : Object.entries(familyTerms).filter(([, terms]) => terms.some(term => hasPhrase(title, term))).map(([family]) => family);
+  // Do not substitute another occupation merely because it shares generic skills.
+  const compatible = direct || (focus.includes(families[role.id]) && level(title) === level(role.title));
+  return { compatible, direct, reason: direct ? `Title connects to your ${basis}: ${title}. Check the actual responsibilities and level.`
+    : compatible ? `Related work area and responsibility level to your ${basis}: ${title}. Sector requirements still need checking.`
+      : `Outside the supported focus of your ${basis}: ${title}. Available to browse, not suggested.` };
+}
 
 export function matchRole(profile, role) {
   // Only exact, confirmed skill labels/aliases count. Do not infer skills from
   // a name, title, country, unreviewed CV, free-text examples or negative phrases.
   const entered = String(profile.skills || '').split(/[,;\n]/).map(value => value.trim()).filter(Boolean);
   const matches = role.signals.flatMap(signal => {
-    const accepted = new Set(aliases[signal.key].map(normalise));
-    const supplied = entered.find(value => accepted.has(normalise(value)));
+    const accepted = new Set(aliases[signal.key].map(value => normalise(canonicalSkill(value))));
+    const supplied = entered.find(value => accepted.has(normalise(canonicalSkill(value))));
     return supplied ? [{ ...signal, supplied, skill: aliases[signal.key][0] }] : [];
   });
   const coreCount = matches.filter(match => match.core).length;
+  const context = directionContext(profile, role);
   return {
-    role, matches,
-    relevant: matches.length >= 2 && coreCount >= 1,
+    role, matches, context,
+    relevant: context.direct || (context.compatible && matches.length >= 2 && coreCount >= 1),
     // This is only a catalogue ordering rule, never a qualification/probability score.
-    order: matches.length + coreCount,
+    order: (context.direct ? 100 : 0) + matches.length + coreCount,
     prompts: role.signals.filter(signal => !matches.some(match => match.key === signal.key)).map(signal => aliases[signal.key][0])
   };
 }

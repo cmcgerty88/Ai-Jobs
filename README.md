@@ -24,7 +24,7 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 
 - Browser-based PDF, DOCX and TXT reading, with manual text entry as a fallback.
 - Candidate-reviewed experience and skills; no invented achievements.
-- Local role exploration using a small editorial catalogue of 12 business, service and support role directions. Each provides explicit skill connections, questions for real adverts, an example to prepare and copyable search phrases.
+- Local role exploration using a small editorial catalogue of 17 business, service and technology-delivery role directions. Each provides explicit skill connections, questions for real adverts, an example to prepare and copyable search phrases.
 - Saved role directions and next actions, with optional device saving. Previously saved profiles remain compatible.
 - UK/Republic of Ireland work preferences, explicit currency and gross annual pay, working pattern, hours and sponsorship constraints.
 - User-selected LinkedIn, Indeed and CV-Library searches for target/related titles; clearly labelled external searches with manual import retained. No scraping or direct imports from those providers.
@@ -34,7 +34,7 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - User goals, application dates/stages, completed interviews, follow-up actions, weekly counts and cautious rule-based recommendations.
 - Optional local usefulness feedback with a minimised preview; nothing sent automatically.
 - Vacancy-specific, editable CV drafts: reordered confirmed skills and examples, shared career details, preview, review checks and Word/PDF/text downloads.
-- Interview questions for all 12 editorial roles, plus general and user-selected advert-requirement prompts; private practice notes and PDF/text downloads.
+- Interview questions for all 17 editorial roles, plus general and user-selected advert-requirement prompts; private practice notes and PDF/text downloads.
 - Responsive layout and keyboard-accessible forms/dialogs.
 
 There is no external AI analysis, email delivery, hosted account, cloud database or automatic application sending. Once configured, a scheduled collector retrieves a limited shared pool of public Reed search results; it never receives candidate searches or CVs. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
@@ -45,7 +45,9 @@ OpenAI integration is deliberately deferred. This release needs no API key, bill
 
 `src/roles.mjs` is a manually written exploration library, dated 18 October 2026. It is not a verified occupational taxonomy, a current labour-market study, or evidence that vacancies exist. Its scope is limited; it does not cover all occupations or skill wording.
 
-A suggested direction requires at least two distinct matching skill groups, including at least one associated with the direction's main work. Matching uses exact normalised labels and explicit aliases from the **skills the candidate confirmed**. The most connected entries are shown, up to five. This internal ordering is not a fit percentage, eligibility judgement or hiring probability. It does not use the candidate's name, job title, raw CV, salary or country to infer abilities.
+Directions prioritise the candidate's target role, or current role when no target is entered. A direct catalogue title connection is shown first and does not infer any skills. Other suggestions must share a supported work area and responsibility level, with at least two distinct confirmed skill groups including one linked to the role's main work. Without a title, those skill rules operate alone. Unsupported occupations get a coverage message rather than an unrelated fallback. Up to five entries are shown. This is a limited editorial rule set, not a fit percentage, qualification judgement or hiring probability.
+
+CV skill review uses a local vocabulary of 167 skill/tool labels with aliases, including release management, IT service management, software delivery, data, finance and operational work. Source excerpts show why each suggestion appeared; only labels explicitly selected by the user enter the reviewed profile. Common negation and aspiration phrases are excluded conservatively. The vocabulary and wording rules are not exhaustive, and do not establish proficiency, certification or recency. Users can edit or add skills themselves. Source excerpts and raw CV text remain temporary and are excluded from encrypted profile persistence.
 
 Missing matches are areas to check, not a conclusion that the person lacks those skills. Roles can always be browsed and saved for exploration without matching. Actual job requirements, pay, work location, qualifications and eligibility must be checked against individual vacancies. Search phrases incorporate selected location/country and work pattern but are only plain text; the user decides whether to copy them into a search service.
 

@@ -13,7 +13,7 @@ async function saveWorkspace(page) {
 async function unlock(page) { await page.locator('#password').fill(password); await page.getByRole('button', { name: 'Unlock workspace', exact: true }).click(); await expect(page.locator('#workspace')).toBeVisible(); }
 async function completeProfile(page, { stopAtDirections = false } = {}) {
   await page.locator('#name').fill('Synthetic Alex');
-  await page.locator('#currentRole').fill('Customer support team lead');
+  await page.locator('#currentRole').fill('Customer support coordinator');
   await page.locator('#evidence').fill('Led a team of 9. Planned weekly cover and improved customer service reporting.');
   await page.locator('#skills').fill('Excel, customer service');
   await confirmProfile(page);
@@ -204,7 +204,7 @@ test('no-match state remains useful, browsing respects the save limit, and profi
   await expect(page.locator('.role-card')).toHaveCount(0);
   await expect(page.locator('#role-list')).toContainText('This says nothing about your employability');
   await page.getByRole('button', { name: 'Browse all directions', exact: true }).click();
-  await expect(page.locator('.role-card')).toHaveCount(12);
+  await expect(page.locator('.role-card')).toHaveCount(17);
   for (let i = 0; i < 5; i++) await page.locator('.role-card').nth(i).getByRole('button', { name: 'Save this direction' }).click();
   await page.locator('.role-card').nth(5).getByRole('button', { name: 'Save this direction' }).click();
   await expect(page.locator('#direction-feedback')).toContainText('saved five directions');

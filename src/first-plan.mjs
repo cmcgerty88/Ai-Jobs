@@ -2,7 +2,7 @@ import { exploreRoles } from './roles.mjs';
 import { diagnose } from './progress.mjs';
 
 // A starting experiment, not an assessment of hiring probability or rejection causes.
-// Only reviewed skill labels influence role suggestions; raw CV text is never used.
+// Reviewed role titles constrain directions; only confirmed labels count as skills.
 export function firstPlan(state, now = Date.now()) {
   const goal = state.profile.goal;
   const roles = goal === 'clarity' ? exploreRoles(state.profile, 2) : [];
@@ -31,8 +31,8 @@ export function firstPlan(state, now = Date.now()) {
     detail: roles.length
       ? `Look for one ${roles[0].role.title.toLowerCase()} advert. Compare its essential requirements with your example of work. Check the location, pay and working pattern before deciding whether to pursue it.`
       : 'Find one advert for work you have done or would like to explore. Check the essential requirements against your experience. You can compare it here even if its title isn’t in our role library.',
-    basis: roles.length ? 'These directions connect to the skill labels you confirmed. They are starting points to investigate, not a judgement that you are qualified.'
-      : 'Our small role library has no connections to the skill labels you entered. This says nothing about your employability; many careers and skill descriptions are not covered.',
+    basis: roles.length ? 'These directions use your target role (or current role when no target is entered) and confirmed skills. A title connection is not a judgement that you are qualified.'
+      : 'Our small role library has no supported connections for your role focus and confirmed skills. This says nothing about your employability; many careers and skill descriptions are not covered.',
     action: roles.length ? 'Explore these directions' : 'Compare a vacancy I choose', step: roles.length ? 3 : 4, roles,
     limitation: limitation + ' Actual vacancies may have requirements or working conditions you haven’t checked yet.'
   };
