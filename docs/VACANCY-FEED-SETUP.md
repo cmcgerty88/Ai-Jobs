@@ -20,6 +20,16 @@ Once connected, the workflow refreshes daily at 06:17 UTC and on pushes to main.
 
 ## What the first pool covers
 
+### If the workflow is green but no jobs appear
+
+Open the latest **Publish UK vacancy pool** run and read its summary. A green run of another workflow does not confirm vacancy publication. The summary now distinguishes a skipped feed from a collection with a specific listing count. A manually started run fails if `REED_API_KEY` is unavailable; automatic runs without a configured feed still skip publication with a warning.
+
+- **Feed was not published:** add `REED_API_KEY` as a repository **Actions secret**, not a repository variable. The configuration job cannot read environment-only secrets. Then rerun the workflow.
+- **Collected 0 listings:** the generated pool is empty. Check the provider response/collector before changing candidate filters.
+- **Collected listings, but the site says “not connected”:** confirm the deployment step succeeded, Pages Source is **GitHub Actions**, and you opened the deployed GitHub Pages site rather than a local or downloaded copy. Refresh the page.
+- **“0 suggestions from [a positive number] listings”:** the feed loaded, but the title, confirmed skills or location filters found no matches. Try a shorter target title and leave location blank as a diagnostic. The pool is limited; this does not establish that no suitable jobs exist.
+- **Pool stale or could not load:** check the latest collection/deployment and the site's `data/vacancies.json` response. Do not paste API keys or candidate data into troubleshooting messages.
+
 The collector performs 30 fixed public searches: 15 broad job topics, each with a UK-wide and an explicit Northern Ireland query. It requests the first 50 results from each search, deduplicates job IDs and caps the snapshot at 1,000 listings. See `SEARCH_TOPICS` and `publicQueries()` in `scripts/refresh-vacancies.mjs` for the exact scope. These searches are independent of all candidate inputs.
 
 This is a limited pool, not an exhaustive index of UK jobs. Availability in a particular town, occupation or seniority is not guaranteed. Northern Ireland is queried explicitly, but actual regional coverage must be checked once the provider is connected. Country-based search scope is not proof of work authorisation or where a remote role can be performed. Imported jobs leave work-country eligibility, salary units, sponsorship, essentials, working pattern and vacancy status unknown until reviewed.
