@@ -188,17 +188,40 @@ function showSkillSuggestions() {
   $('skill-suggestions').hidden = false;
   container.append(node('p', `${mentions.length} skill suggestions found. Review each one; add missing skills in “Skills you can demonstrate”. This vocabulary cannot recognise every skill or establish your proficiency.`, 'hint'));
   if (!mentions.length) return;
+  const addAll = node('button', 'Add all found skills', 'secondary'); addAll.type = 'button'; addAll.id = 'add-all-skills';
+  const transferStatus = node('p', '', 'hint'); transferStatus.id = 'skill-transfer-status'; transferStatus.setAttribute('role', 'status');
+  addAll.addEventListener('click', () => {
+    const current = $('skills').value;
+    const listed = new Set(current.split(/[,;\n]/).map(value => canonicalSkill(value).toLowerCase()));
+    const additions = mentions.map(item => item.name).filter(skill => !listed.has(skill.toLowerCase()));
+    const combined = current + (current.trim() && additions.length ? ', ' : '') + additions.join(', ');
+    if (combined.length > 2000) {
+      transferStatus.textContent = 'These skills would exceed the 2,000-character limit. Nothing was changed. Remove less relevant entries or add skills individually.';
+      return;
+    }
+    if (additions.length) {
+      $('skills').value = combined; profileChanged();
+      const updated = new Set(combined.split(/[,;\n]/).map(value => canonicalSkill(value).toLowerCase()));
+      container.querySelectorAll('button[data-skill]').forEach(button => button.setAttribute('aria-pressed', String(updated.has(button.dataset.skill.toLowerCase()))));
+    }
+    transferStatus.textContent = additions.length
+      ? `Added ${additions.length} skills to “Skills you can demonstrate”. Existing entries were kept. Review the field and remove anything you cannot demonstrate.`
+      : 'All found skills are already in “Skills you can demonstrate”. Review the field before continuing.';
+    $('skills').focus(); $('skills').scrollIntoView({ behavior: 'instant', block: 'center' });
+  });
+  container.append(addAll, transferStatus);
   const existing = new Set($('skills').value.split(/[,;\n]/).map(value => canonicalSkill(value).toLowerCase()));
   const evidence = node('details'); evidence.append(node('summary', 'See the CV text behind these suggestions'));
   const excerpts = node('ul');
   for (const { name: skill, snippet } of mentions) {
-    const button = node('button', skill); button.type = 'button'; button.setAttribute('aria-pressed', String(existing.has(skill.toLowerCase())));
+    const button = node('button', skill); button.type = 'button'; button.dataset.skill = skill; button.setAttribute('aria-pressed', String(existing.has(skill.toLowerCase())));
     button.addEventListener('click', () => {
       const skills = $('skills').value.split(/[,;\n]/).map(value => value.trim()).filter(Boolean);
       const found = skills.findIndex(value => canonicalSkill(value).toLowerCase() === skill.toLowerCase());
       if (found === -1) skills.push(skill); else skills.splice(found, 1);
       if (skills.join(', ').length > 2000) { announce('Your skills field is full. Remove a less relevant skill before adding another.'); return; }
       $('skills').value = skills.join(', '); button.setAttribute('aria-pressed', String(found === -1)); profileChanged();
+      transferStatus.textContent = `${skill} ${found === -1 ? 'added to' : 'removed from'} “Skills you can demonstrate”.`;
     });
     container.append(button);
     const item = node('li'); item.append(node('strong', skill + ': '), document.createTextNode(snippet)); excerpts.append(item);

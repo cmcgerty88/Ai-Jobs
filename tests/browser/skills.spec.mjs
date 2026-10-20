@@ -1,6 +1,31 @@
 import { test, expect } from '@playwright/test';
 import { expand, tool } from './helpers.mjs';
 
+test('bulk skill transfer preserves manual entries, avoids alias duplicates and respects the field limit', async ({ page }) => {
+  await page.goto('/'); await page.locator('#diagnosis-start').click(); await page.locator('[data-goal="clarity"]').click();
+  await expand(page, '#cv-reader');
+  await page.locator('#cv-text').fill('Excel, scheduling and user acceptance testing.');
+  await page.locator('#find-skills').click();
+  await page.locator('#skills').fill('UAT, Incident management');
+  await page.locator('#profile-confirmed').check();
+  await page.getByRole('button', { name: 'Add all found skills', exact: true }).click();
+  await expect(page.locator('#skills')).toHaveValue('UAT, Incident management, Excel, Scheduling');
+  await expect(page.locator('#skills')).toBeFocused();
+  await expect(page.locator('#profile-confirmed')).not.toBeChecked();
+  await expect(page.locator('#skill-transfer-status')).toContainText('Added 2 skills');
+  await expect(page.locator('#skill-chips').getByRole('button', { name: 'User acceptance testing', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#add-all-skills').click();
+  await expect(page.locator('#skills')).toHaveValue('UAT, Incident management, Excel, Scheduling');
+  await expect(page.locator('#skill-transfer-status')).toContainText('already');
+  await page.locator('#skill-chips').getByRole('button', { name: 'Excel', exact: true }).click();
+  await expect(page.locator('#skills')).toHaveValue('UAT, Incident management, Scheduling');
+  const full = 'x'.repeat(1998);
+  await page.locator('#skills').fill(full);
+  await page.locator('#add-all-skills').click();
+  await expect(page.locator('#skills')).toHaveValue(full);
+  await expect(page.locator('#skill-transfer-status')).toContainText('Nothing was changed');
+});
+
 test('CV suggestions show evidence, require confirmation and keep technical role directions focused', async ({ page }) => {
   const requests = []; page.on('request', request => requests.push(request));
   await page.goto('/'); await page.locator('#diagnosis-start').click(); await page.locator('[data-goal="clarity"]').click();
