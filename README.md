@@ -1,6 +1,6 @@
 # RoleBridge
 
-A private device-only pilot for people exploring their next role after redundancy. The default journey asks for a situation and a short experience summary, then gives one useful next step before offering saving. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
+A private device-only pilot for people exploring their next role after redundancy. The default journey asks for a situation and a short experience summary, then gives one useful next step before offering saving. Manual vacancy entry is retained. Suggested vacancies adds related-title searches on LinkedIn, Indeed and CV-Library plus a prepared UK Reed pool matched locally to a target role and confirmed skills. The external search links work independently of the Reed feed; direct imports from LinkedIn/Indeed/CV-Library are not connected. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
 
 ## Try it
 
@@ -10,10 +10,10 @@ https://cmcgerty88.github.io/Ai-Jobs/
 
 1. Choose **Get my free Job Search Diagnosis**. New visitors start without an account or password; nothing is saved automatically.
 2. Choose the situation closest to yours: unsure which roles to target, applying without interviews, or interviewing without offers.
-3. Enter a recent role and one short example of work. Add demonstrable skills to explore role directions. Optionally open the local CV reader to choose reviewed excerpts and skill labels; the file is never uploaded or automatically added to your profile.
+3. Enter a recent role, optionally the role you want next, and one short example of work. Add demonstrable skills to explore role directions. Optionally open the local CV reader to choose reviewed excerpts and skill labels; the file is never uploaded or automatically added to your profile.
 4. Confirm your experience and choose **Show my next step**. Get one practical experiment, its basis and limits, plus up to two connected role directions when relevant. An unsupported career still gets a useful way to investigate a vacancy, not a negative employability judgement.
 5. Optionally choose **Save my progress** after the result. Explicit consent and a strong password enable encrypted device-only saving. There is no password reset or cloud account. Unsaved work disappears on refresh or close.
-6. Follow the suggested action or open **More tools** for work preferences, role exploration, real-vacancy comparison, CV/interview packs or progress tracking. Work country stays unknown until selected; skipping preferences does not create a false country match or rejection.
+6. Follow the suggested action or open **More tools → Suggested vacancies**. Search LinkedIn, Indeed or CV-Library for your target or a related title; only the displayed role and location are sent when you choose a link. Manual **Add a vacancy** is still available. Once the Reed feed is connected, choose a target role/location and add a suggestion to your shortlist without retyping it. Comparison, CV/interview packs and tracking then use that record; read the full advert and check missing facts first. Other tools remain optional. Work country stays unknown until selected; skipping preferences does not create a false country match or rejection.
 7. Returning users unlock their existing workspace and see **What’s happened since last time?** Update one application or review a next action. Each application’s outcome form opens separately; goal/activity details and optional feedback are collapsed.
 8. Use **Backup, lock or delete** for encrypted backups and deletion. Downloadable CVs/interview packs remain ordinary unencrypted files.
 Follow the [private pilot guide](docs/PRIVATE-PILOT.md) to test this with real users. Read the [privacy/security review and hosted-account gates](docs/PRIVACY-SECURITY-REVIEW.md) before collecting research data or adding external processing.
@@ -27,6 +27,8 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - Local role exploration using a small editorial catalogue of 12 business, service and support role directions. Each provides explicit skill connections, questions for real adverts, an example to prepare and copyable search phrases.
 - Saved role directions and next actions, with optional device saving. Previously saved profiles remain compatible.
 - UK/Republic of Ireland work preferences, explicit currency and gross annual pay, working pattern, hours and sponsorship constraints.
+- User-selected LinkedIn, Indeed and CV-Library searches for target/related titles; clearly labelled external searches with manual import retained. No scraping or direct imports from those providers.
+- Target-role and local skill/location filtering of a shared vacancy pool, with one-click shortlist import and clear source/freshness limits. The Reed connection is prepared but not activated; see [vacancy-feed setup](docs/VACANCY-FEED-SETUP.md).
 - Real-vacancy entry, conservative constraint checks, source-check dates and user-controlled essential-requirement confirmation.
 - Encrypted opt-in autosaving, password unlock, inactivity lock, encrypted backup/restore, 30-day expiry and deletion controls.
 - User goals, application dates/stages, completed interviews, follow-up actions, weekly counts and cautious rule-based recommendations.
@@ -35,7 +37,7 @@ The original [fictional demo](research/rolebridge-demo.html), [sample PDF](resea
 - Interview questions for all 12 editorial roles, plus general and user-selected advert-requirement prompts; private practice notes and PDF/text downloads.
 - Responsive layout and keyboard-accessible forms/dialogs.
 
-There is no automatic job search, external AI analysis, email delivery, hosted account, cloud database or automatic application sending. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
+There is no external AI analysis, email delivery, hosted account, cloud database or automatic application sending. Once configured, a scheduled collector retrieves a limited shared pool of public Reed search results; it never receives candidate searches or CVs. Vacancy links are not fetched by the app. Shared skill words do not prove qualification; open listings do not prove active hiring. Current market research in the report remains provisional.
 
 OpenAI integration is deliberately deferred. This release needs no API key, billing setup, server or additional hosting. The existing GitHub Pages deployment serves the role catalogue and matching logic locally.
 
@@ -53,7 +55,7 @@ CV-reading limits: 5 MB per file, 30 PDF pages and 100,000 extracted characters.
 
 ## Personal data
 
-The CV readers are bundled and served from this repository; no CDN is used. CV files and their text are processed in the browser and are not uploaded. No app analytics or external API calls are made. GitHub Pages still receives ordinary hosting requests, and employer links open external websites when selected.
+The CV readers are bundled and served from this repository; no CDN is used. CV files and their text are processed in the browser and are not uploaded. The browser makes no analytics or external API calls. Explicit job-site search links send the displayed role/location to the chosen site; no CV or skill list is included. A separately configured GitHub Actions job can call Reed for public listings; candidate data is not part of those calls. GitHub Pages still receives ordinary hosting requests, and employer links open external websites when selected.
 
 New passwords require 14–256 characters, at least one uppercase letter and one special character (punctuation or a symbol; spaces and numbers alone do not count). Existing workspace passwords and backups still unlock using the original password.
 
@@ -100,7 +102,7 @@ Use the lockfile and retain dependency licences. Do not disable TLS or checksum 
 
 ## Next integration stage
 
-Automated AI analysis and job feeds need a separately hosted backend, credentials, a clearly documented data flow and suitable provider terms. Do not insert an API key into these public files or request one through a candidate form. Decide authentication, storage, deletion and processing notices before adding server-side CV handling.
+Automated AI analysis still needs a separately hosted private backend and the privacy gates below. The prepared Reed job feed instead runs in GitHub Actions and publishes a shared static snapshot; matching stays in the browser. It needs a provider API account, a repository secret, suitable provider terms and Pages Actions deployment. Follow [the connection guide](docs/VACANCY-FEED-SETUP.md); no live feed has been verified yet. Do not insert an API key into these public files or request one through a candidate form. Decide authentication, storage, deletion and processing notices before adding server-side CV handling.
 
 A job-data provider must be checked for current UK/Irish coverage, permitted usage and prices. Employer vacancy feeds may be another route. Never label a generated job as a live opportunity or treat a vacancy's age as proof of a ghost job.
 

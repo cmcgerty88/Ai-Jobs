@@ -35,7 +35,8 @@ for (const [goal, action] of [['clarity', 'Explore one of these role directions'
     expect(requests.every(r => r.url.startsWith('http://127.0.0.1:8771/') && r.method === 'GET' && !r.body)).toBeTruthy();
     expect(errors).toEqual([]);
     await page.locator('#first-plan-continue').click();
-    await expect(page.locator(goal === 'clarity' ? '#step-3' : '#step-4')).toBeVisible();
+    await expect(page.locator('#step-8')).toBeVisible();
+    await expect(page.locator('#vacancy-pool-status')).toContainText('not connected yet');
   });
 }
 
@@ -90,7 +91,7 @@ test('unsupported career still gets an action; mobile can change situation witho
   await page.setViewportSize({ width: 320, height: 740 });
   await begin(page); await experience(page, 'neurosurgery');
   await expect(page.locator('#first-plan-basis')).toContainText('nothing about your employability');
-  await expect(page.locator('#first-plan-continue')).toHaveText('Compare a vacancy I choose');
+  await expect(page.locator('#first-plan-continue')).toHaveText('Find suggested vacancies');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.getByRole('button', { name: 'Edit my answers' }).click();
   await page.getByRole('button', { name: 'Change my situation' }).click();

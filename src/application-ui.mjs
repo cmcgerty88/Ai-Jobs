@@ -57,6 +57,7 @@ export function initApplicationPack({ getState, changed, announce }) {
     $('pack-empty').hidden = Boolean(job); $('pack-create').hidden = Boolean(pack); $('pack-create').disabled = !job;
     $('pack-delete').hidden = !pack; $('pack-editor').hidden = !pack; $('pack-stale').hidden = true;
     $('pack-status').textContent = pack ? 'This draft belongs to the selected vacancy. Review and edit it before use.' : job ? 'Create a draft from the profile you confirmed, then add your career details.' : '';
+    if (job?.source?.summaryOnly) $('pack-status').textContent += ' This vacancy was imported from a short Reed summary. Check the full advert and update any missing requirements before relying on this pack.';
     $('cv-export-status').textContent = ''; $('interview-export-status').textContent = ''; invalidateReview();
     if (!pack) { $('cv-preview').replaceChildren(); $('interview-questions').replaceChildren(); baseForm.reset(); draftForm.reset(); return; }
     for (const [key, value] of Object.entries(state.cv)) { const input = baseForm.elements.namedItem(key); if (input) { if (input.type === 'checkbox') input.checked = value; else input.value = value; } }

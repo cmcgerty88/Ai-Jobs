@@ -1,0 +1,69 @@
+name: Publish UK vacancy pool
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: vacancy-pool-publication
+  cancel-in-progress: false
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.feed.outputs.configured }}
+    steps:
+      - name: Check feed configuration
+        id: feed
+        env:
+          REED_API_KEY: ${{ secrets.REED_API_KEY }}
+        run: |
+          if [ -n "$REED_API_KEY" ]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo 'Reed is not configured. The current site is unchanged.'
+          fi
+  publish:
+    needs: configuration
+    if: needs.configuration.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Refresh public listings
+        env:
+          REED_API_KEY: ${{ secrets.REED_API_KEY }}
+        run: node scripts/refresh-vacancies.mjs
+      - name: Stage only public website files
+        run: |
+          mkdir _site
+          cp index.html styles.css .nojekyll README.md _site/
+          cp -R src vendor research data docs _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+          retention-days: 1
+      - name: Publish the site and shared pool
+        id: deployment
+        uses: actions/deploy-pages@v4

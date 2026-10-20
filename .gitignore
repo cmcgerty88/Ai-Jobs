@@ -17,3 +17,6 @@ rolebridge-cv-*.docx
 rolebridge-cv-*.txt
 rolebridge-interview-*.pdf
 rolebridge-interview-*.txt
+# Atomic public-feed writes must not be committed halfway through a refresh.
+data/vacancies.tmp.json
+_site/

@@ -1,5 +1,6 @@
 import { initApplicationPack } from './application-ui.mjs';
 import { firstPlan } from './first-plan.mjs';
+import { initVacancies } from './vacancy-ui.mjs';
 import { blankState, cleanProfile, cleanJob, safeJobUrl, findSkillMentions } from './model.mjs';
 import { initWorkspace } from './workspace.mjs';
 import { diagnose, STAGES, GOALS, cleanProgress, progressError } from './progress.mjs';
@@ -11,7 +12,7 @@ const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
 let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
-let workspace, applicationPack;
+let workspace, applicationPack, vacancies;
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
 
 function announce(text) { $('announcement').textContent = ''; requestAnimationFrame(() => { $('announcement').textContent = text; }); }
@@ -46,6 +47,7 @@ function showStep(step, focus = true) {
   if (step === 4) renderResults();
   if (step === 5) renderDashboard();
   if (step === 7) renderFirstPlan();
+  if (step === 8) vacancies.open();
   if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
   $('dashboard-link').hidden = step !== 4;
   $('tool-menu').open = false;
@@ -54,7 +56,7 @@ function showStep(step, focus = true) {
   document.querySelector('.save-bar').hidden = step === 0;
   $('save-open').hidden = step === 7;
   if (focus) {
-    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title' }[step]);
+    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
@@ -90,7 +92,10 @@ function renderFirstPlan() {
   $('first-plan-basis').textContent = plan.basis;
   $('first-plan-evidence').textContent = state.profile.evidence;
   $('first-plan-limit').textContent = plan.limitation;
-  const button = $('first-plan-continue'); button.textContent = plan.action; button.onclick = () => navigate(plan.step);
+  const button = $('first-plan-continue');
+  const findVacancies = plan.step !== 5 && Boolean(state.profile.targetRole.trim() || state.profile.skills.trim());
+  button.textContent = findVacancies ? 'Find suggested vacancies' : plan.action;
+  button.onclick = () => navigate(findVacancies ? 8 : plan.step);
   const list = $('first-plan-roles'); list.replaceChildren();
   if (plan.roles.length) list.append(node('h3', 'Directions connected to your skills'));
   for (const { role, matches } of plan.roles) {
@@ -167,7 +172,9 @@ function renderDirections() {
       renderSavedDirections(); setSaveStatus();
       if (filter === 'saved' && already) { renderDirections(); $('role-view').focus(); }
     });
-    actions.append(save); card.append(actions); list.append(card);
+    const find = node('button', 'Find vacancies for this direction', 'secondary'); find.type = 'button';
+    find.addEventListener('click', () => { $('targetRole').value = role.title; syncProfile(); setSaveStatus(); navigate(8); });
+    actions.append(save, find); card.append(actions); list.append(card);
   }
 }
 $('role-view').addEventListener('change', renderDirections);
@@ -231,6 +238,7 @@ function openJob(existing) {
   $('job-dialog').showModal(); $('job-title').focus();
 }
 $('add-job').addEventListener('click', () => openJob());
+$('suggestions-add-manual').addEventListener('click', () => { navigate(4); if (currentStep === 4) openJob(); });
 jobForm.addEventListener('submit', event => {
   event.preventDefault(); $('job-error').textContent = '';
   if (!jobForm.reportValidity()) return;
@@ -238,7 +246,7 @@ jobForm.addEventListener('submit', event => {
   if (data.url.trim() && !safeJobUrl(data.url)) { $('job-error').textContent = 'Use a valid HTTPS vacancy link without a username or password in the address.'; $('job-url').focus(); return; }
   if (data.salaryMin !== '' && data.salaryMax !== '' && Number(data.salaryMin) > Number(data.salaryMax)) { $('job-error').textContent = 'The lower salary must not exceed the upper salary.'; $('job-min').focus(); return; }
   const existing = state.jobs.find(job => job.id === data.id);
-  const job = cleanJob({ ...data, progress: existing?.progress, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
+  const job = cleanJob({ ...data, source: existing?.source, progress: existing?.progress, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
   if (existing) state.jobs[state.jobs.indexOf(existing)] = job; else state.jobs.push(job);
   $('job-dialog').close(); renderResults(); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
 });
@@ -282,6 +290,7 @@ function renderResults() {
     if (job.location) meta.append(node('span', job.location));
     if (job.mode !== 'unknown') meta.append(node('span', { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }[job.mode]));
     card.append(meta);
+    if (job.source?.summaryOnly) card.append(node('p', 'Imported from a Reed summary. Read the full advert and check missing facts before using this for a CV or interview pack. The feed retrieval is not your own check that the vacancy is open.', 'hint'));
     card.append(node('p', result.failures[0] || result.questions[0] || 'The entered requirements fit, and you confirmed the essentials. This is worth reviewing; it is not a prediction of an interview.', 'job-reason'));
     const details = node('details', undefined, 'job-details'); details.append(node('summary', 'See the reasons and missing information'));
     listSection(details, 'Conflicts with your requirements', result.failures);
@@ -389,4 +398,16 @@ workspace = initWorkspace({
   }, announce
 });
 applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce });
+vacancies = initVacancies({
+  getState: () => state, navigate,
+  updateSearch: (target, location) => { $('targetRole').value = target; $('locations').value = location; syncProfile(); setSaveStatus(); },
+  addJob: vacancy => {
+    if (state.jobs.some(job => job.id === vacancy.id || job.url === vacancy.url)) return 'This vacancy is already in your shortlist.';
+    if (state.jobs.length >= 30) return 'Your shortlist holds up to 30 vacancies. Remove an old vacancy before adding another.';
+    if (Date.now() - Date.parse(vacancy.source.fetchedAt) > 72 * 3600000 || (vacancy.source.expiresAt && Date.parse(vacancy.source.expiresAt) <= Date.now())) return 'This listing needs a fresh source check. Refresh the vacancy pool.';
+    state.jobs.push(cleanJob(vacancy)); setSaveStatus();
+    announce('Added to your shortlist. The summary is ready to compare; check the full advert before applying.');
+    return true;
+  }
+});
 fillProfile(); showStep(0, false);

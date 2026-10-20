@@ -1,0 +1,43 @@
+# Connect the UK vacancy pool
+
+The matching interface and Reed adapter are built, but **no live source is connected or verified yet**. Development used synthetic API responses. The checked-in `data/vacancies.json` is an explicit empty, unconfigured marker, not sample jobs. No API account, billing account or secret has been created for you. OpenAI is not needed.
+
+## LinkedIn, Indeed and CV-Library
+
+Manual **Add a vacancy** remains available. The suggestions page also offers searches for the chosen target role and up to two related titles connected to confirmed skills (or saved directions). These are ordinary links to LinkedIn, Indeed and CV-Library, not live listings fetched into the app. No external request is made until the candidate selects a link. Only the displayed role and location are placed in that search URL; no CV, name, experience text or skill list is included. A blank location defaults to the United Kingdom. The provider may require sign-in, change its search interface or interpret locations differently; these destinations have not been live-verified from this workspace.
+
+Direct import from these sites is not implemented or authorised by a normal user account. It requires a provider-approved feed/API or a licensed job-data partner covering those sources. No scraping, session-cookie collection, browser-login automation or bypass of site access controls is included. Do not label the prepared Reed pool as containing LinkedIn or Indeed listings. For now, a candidate can open the search, choose a vacancy and add it manually. The Reed connection below is the prepared route for one-click import inside RoleBridge.
+
+## One-time Reed setup
+
+1. Request a jobseeker API account at [Reed’s developer page](https://www.reed.co.uk/developers/jobseeker). Review the current API agreement, permitted public display/caching, attribution, limits and any charges for this use. The connector uses the search endpoint and short summaries; it is not a scraping tool or a licence to redistribute data outside the agreement. Provider documentation/account access could not be verified from this development workspace.
+2. In [this repository’s Actions secrets settings](https://github.com/cmcgerty88/Ai-Jobs/settings/secrets/actions), choose **New repository secret**. Name it **REED_API_KEY** and paste the key there. Do not paste it into chat, an issue, a candidate form, a source file or a public repository variable.
+3. In [Settings → Pages](https://github.com/cmcgerty88/Ai-Jobs/settings/pages), change **Build and deployment → Source** to **GitHub Actions**. This is required for generated listings to be included in the published site; a branch-only Pages build would serve the empty marker in Git.
+4. Open [Actions → Publish UK vacancy pool](https://github.com/cmcgerty88/Ai-Jobs/actions/workflows/vacancies.yml), select **Run workflow** on `main`, and check that publication succeeds. A configured secret is not proof that the provider account works.
+5. Open the site, choose a target role and try **Suggested vacancies**. Confirm the retrieval timestamp, a representative Belfast/Northern Ireland result if available, source links and summary accuracy against Reed. If no matching listing exists, broaden the role or location rather than interpreting this as a failed job search. Validate the live provider contract before inviting people to rely on the pool.
+
+Once connected, the workflow refreshes daily at 06:17 UTC and on pushes to main. GitHub may delay scheduled jobs. There is no separately hosted app server, candidate database or OpenAI connection. The ordinary branch deployment remains available while the feed secret is absent; do not change the Pages source until you are ready to activate the feed.
+
+## What the first pool covers
+
+The collector performs 30 fixed public searches: 15 broad job topics, each with a UK-wide and an explicit Northern Ireland query. It requests the first 50 results from each search, deduplicates job IDs and caps the snapshot at 1,000 listings. See `SEARCH_TOPICS` and `publicQueries()` in `scripts/refresh-vacancies.mjs` for the exact scope. These searches are independent of all candidate inputs.
+
+This is a limited pool, not an exhaustive index of UK jobs. Availability in a particular town, occupation or seniority is not guaranteed. Northern Ireland is queried explicitly, but actual regional coverage must be checked once the provider is connected. Country-based search scope is not proof of work authorisation or where a remote role can be performed. Imported jobs leave work-country eligibility, salary units, sponsorship, essentials, working pattern and vacancy status unknown until reviewed.
+
+Matching happens in the browser using the target title and confirmed skills. A chosen target requires at least 75% of its meaningful title words to appear in the listing title. Without a target, at least two confirmed skill phrases must occur in the summary. Exact target phrases rank first, then title words and skill connections. The location filter matches listed words, not geography or commute distance. These are explainable word connections, not a fit score, semantic CV analysis, verified qualifications or hiring probability.
+
+## Privacy, freshness and failure handling
+
+- Browsers download the same fixed same-origin JSON path. No CV text, candidate name, role query, location or cookies are sent to Reed by the app. Reed advert links and the clearly labelled job-site searches open external sites only when selected, with no referrer. The latter explicitly include the displayed search role and location. Hosting still receives normal network request metadata.
+- A new optional target-role field is included in the existing encrypted profile. Imported job details/provenance use the existing encrypted shortlist when saving is enabled. No extra candidate storage or analytics is introduced.
+- The collector reads only the API secret and fixed configuration. Authentication is in an HTTPS Basic header, never a URL. Redirects are rejected so credentials cannot follow a redirect. Auth failures and rate limiting stop the run; a total outage or incompatible response leaves the previous deployed snapshot unchanged. Other partial failures are labelled as reduced coverage.
+- Listed closing dates are honoured when parseable. Invalid closing dates are excluded. Date-only closing dates are conservatively treated as ending at the next UTC midnight. Unknown dates stay unknown. A retrieval timestamp does not establish current hiring intent or a user-verified open advert.
+- Snapshots older than 72 hours are hidden from suggestions. Adding a listing rechecks its age and expiry. A refresh does not change or delete a candidate’s existing shortlist, outcomes or CV drafts. Saved jobs must still be checked at the original source.
+- Only whitelisted public listing fields enter the deployment. Provider payloads, credentials, tests and workflow files are excluded. Refreshed listings are **not committed to Git history**. The deployment artifact is configured for one-day retention; provider terms must permit the public display and platform retention involved. The deployed snapshot stays available until a successful replacement. Client-side hiding is not deletion from the public JSON.
+- To disable and remove the public pool, remove the repository secret, switch Pages back to the `main` root branch source and rebuild the site with the checked-in unconfigured marker. This does not erase third-party caches or change candidates’ private saved shortlists.
+
+## Development and verification
+
+`npm test` covers adapter contracts, credential/header handling with a synthetic key, rate limits, outages, deduplication, dates, safe URLs, matching and serialization. Browser tests intercept the fixed JSON request with fictional jobs and exercise one-click import, comparison, CV download, encrypted continuity, source failures, local filtering and mobile/project-path hosting. Synthetic fixtures are kept under tests, never in the public pool.
+
+To refresh locally after obtaining an authorised key, set `REED_API_KEY` securely in the execution environment and run `npm run refresh:vacancies`. Do not put the key into a shell command stored in history. A missing key fails without changing the pool. Live collection, account limits and GitHub Pages Actions publication remain unverified until the setup steps above are completed.

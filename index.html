@@ -15,7 +15,7 @@
   <a href="#main" class="skip-link">Skip to main content</a>
   <div class="privacy-strip">Your CV stays in your browser. You choose whether to save your profile on this device.</div>
   <div class="shell">
-    <header class="site-header"><a class="brand" href="./" aria-label="RoleBridge home"><span class="brand-mark" aria-hidden="true">R</span>RoleBridge</a><div class="header-links"><span class="version">Private pilot · v0.4</span><button type="button" class="text-button" id="privacy-open">How your data is handled</button></div></header>
+    <header class="site-header"><a class="brand" href="./" aria-label="RoleBridge home"><span class="brand-mark" aria-hidden="true">R</span>RoleBridge</a><div class="header-links"><span class="version">Private pilot · v0.5</span><button type="button" class="text-button" id="privacy-open">How your data is handled</button></div></header>
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
         <div>
@@ -45,7 +45,7 @@
         <button type="button" id="plan-home" class="text-button">My next step</button>
         <details id="tool-menu"><summary>More tools</summary>
           <nav class="steps" aria-label="Optional tools">
-            <button type="button" data-step="1">Edit experience</button><button type="button" data-step="2">Work preferences</button><button type="button" data-step="3">Explore directions</button><button type="button" data-step="4">Compare vacancies</button><button type="button" data-step="6">CV & interview pack</button><button type="button" data-step="5">Progress & check-in</button>
+            <button type="button" data-step="1">Edit experience</button><button type="button" data-step="2">Work preferences</button><button type="button" data-step="3">Explore directions</button><button type="button" data-step="8">Suggested vacancies</button><button type="button" data-step="4">My shortlist & comparison</button><button type="button" data-step="6">CV & interview pack</button><button type="button" data-step="5">Progress & check-in</button>
           </nav>
         </details>
       </div>
@@ -75,6 +75,7 @@
           <form autocomplete="off" id="profile-form" class="card" novalidate>
             <h3 id="profile-prompt">Find a direction to explore</h3><p id="profile-context" class="muted small">Add skills you can demonstrate so we can connect them to role directions.</p>
             <label for="currentRole">Your recent or current role</label><input id="currentRole" name="currentRole" required maxlength="160" autocomplete="off" placeholder="For example, customer service team leader">
+            <label for="targetRole">Role you’d like next <span class="optional">optional if you’re still exploring</span></label><input id="targetRole" name="targetRole" maxlength="160" autocomplete="off" placeholder="For example, operations manager">
             <label for="evidence">One example of work you’ve done</label><textarea spellcheck="false" id="evidence" name="evidence" required minlength="20" maxlength="12000" rows="3" placeholder="What were you responsible for? What did you improve or deliver? Include figures only if you know they are accurate."></textarea>
             <label for="skills">Skills you can demonstrate <span class="optional">optional</span></label><textarea spellcheck="false" id="skills" name="skills" maxlength="2000" rows="2" placeholder="Separate with commas, for example: Excel, scheduling, customer service"></textarea>
             <p class="hint">Keep this about your work. Leave out health details, identity numbers and other people’s contact information.</p>
@@ -96,7 +97,7 @@
         <p id="first-plan-limit" class="hint"></p>
         <div class="button-row"><button type="button" id="result-save" class="secondary">Save my progress</button><button type="button" data-step="1" class="text-button">Edit my answers</button></div>
         <p class="hint">Saving is optional. Your reviewed details are encrypted on this device with a password you choose. The original CV is excluded.</p>
-        <details><summary>What can I do after this?</summary><p>When you have a real vacancy, compare its requirements, build a tailored CV or practise interview questions. Use More tools whenever you need them.</p><button type="button" data-step="5" class="text-button">Record my progress</button></details>
+        <details><summary>What can I do after this?</summary><p>When you have a real vacancy, compare its requirements, build a tailored CV or practise interview questions. Use More tools whenever you need them.</p><div class="button-row"><button type="button" data-step="8" class="secondary">Find suggested vacancies</button><button type="button" data-step="5" class="text-button">Record my progress</button></div></details>
       </section>
       <section id="step-2" class="step-panel" aria-labelledby="preferences-title" hidden>
         <div class="section-heading"><div><p class="eyebrow">Optional · Work that fits</p><h2 id="preferences-title" tabindex="-1">What does work need to fit around?</h2><p class="muted">These are your requirements. You can change them whenever you need to.</p></div></div>
@@ -123,9 +124,33 @@
         </div>
         <div class="form-bottom split"><button type="button" class="secondary" data-back="2">Back to work preferences</button><button type="button" class="primary" data-step="4">Continue to vacancies <span aria-hidden="true">→</span></button></div>
       </section>
+      <section id="step-8" class="step-panel" aria-labelledby="vacancy-pool-title" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Find opportunities · UK, including Northern Ireland</p><h2 id="vacancy-pool-title" tabindex="-1">Vacancies to explore</h2><p class="muted">Search popular job sites for your target role or a related title. Browse suggested listings here when a feed is available.</p></div><button type="button" data-step="4" class="secondary">My shortlist & comparison</button></div>
+        <form id="vacancy-search-form" class="card" autocomplete="off">
+          <div class="field-grid"><div><label for="vacancy-target">Target role</label><input id="vacancy-target" maxlength="160" placeholder="For example, operations manager"></div><div><label for="vacancy-location">Town or region <span class="optional">optional</span></label><input id="vacancy-location" maxlength="300" placeholder="For example, Belfast"></div></div>
+          <p class="hint">Location filters match words in the listing, not a commuting radius. Leave blank to include all locations in this pool. Remote work eligibility still needs checking.</p>
+          <div class="button-row"><button type="submit" class="primary">Find suggestions</button><button type="button" id="vacancy-edit-profile" class="text-button">Review my CV skills</button></div>
+          <p class="hint">Filtering the shared pool happens in your browser. Your CV and confirmed skills aren’t sent to a job site. Opening a search below shares only its chosen role and location through the link.</p>
+        </form>
+        <section class="card jobsite-searches" aria-labelledby="jobsite-title">
+          <h3 id="jobsite-title">Search LinkedIn, Indeed and CV-Library</h3>
+          <p class="small muted">These searches open on the job sites. Their vacancies have not been pulled into RoleBridge. Related titles come from your confirmed skills or saved directions, not a check of current hiring demand.</p>
+          <label for="jobsite-role">Role to search for</label><select id="jobsite-role"></select>
+          <p id="jobsite-search-summary" class="small"></p>
+          <div id="jobsite-links" class="button-row"></div>
+          <p id="jobsite-sharing" class="hint">Selecting a link sends the role and location shown above to that site. Your CV, experience examples and skill list are not included. The site’s own privacy settings apply.</p>
+          <p class="small">Found something useful? Keep using <button type="button" id="suggestions-add-manual" class="text-button">Add a vacancy</button> to compare it and prepare your application.</p>
+        </section>
+        <h3 class="pool-heading">Suggested listings inside RoleBridge</h3>
+        <p id="vacancy-pool-status" role="status" class="notice"></p>
+        <div class="button-row"><button type="button" id="vacancy-refresh" class="text-button">Refresh listings</button><a href="https://www.reed.co.uk" target="_blank" rel="noopener noreferrer" class="small">Vacancy source: Reed.co.uk</a></div>
+        <div id="vacancy-suggestions" class="job-list"></div>
+        <button type="button" id="vacancy-more" class="secondary" hidden>Show more suggestions</button>
+        <p class="hint">Suggestions are keyword connections, not a fit score or prediction of an interview. The pool covers selected searches and may have no suitable listing for your role or location.</p>
+      </section>
       <section id="step-4" class="step-panel" aria-labelledby="vacancies-title" hidden>
-        <div class="section-heading"><div><p class="eyebrow">Optional · Review a vacancy</p><h2 id="vacancies-title" tabindex="-1">Which roles deserve your time?</h2><p class="muted">Add real vacancies you find. We’ll check them against your requirements.</p></div><button type="button" class="primary" id="add-job">Add a vacancy</button></div>
-        <div class="notice soft"><strong>Start with one job you’re considering.</strong><p>Open the employer’s job page, copy its link and description, and enter the details it states. Leave anything unclear as “not stated”. This version does not search job boards or fetch a job from its link.</p></div>
+        <div class="section-heading"><div><p class="eyebrow">Optional · Review a vacancy</p><h2 id="vacancies-title" tabindex="-1">Your shortlist & job analysis</h2><p class="muted">Add a suggestion to your shortlist, then check the advert against your experience and work requirements.</p></div><div class="button-row"><button type="button" data-step="8" class="primary">Find suggested vacancies</button><button type="button" class="secondary" id="add-job">Add a vacancy</button></div></div>
+        <div class="notice soft"><strong>Start with one job you’re considering.</strong><p>Choose a suggested vacancy to bring in its available details, or add an advert yourself. Read the full advert before relying on the comparison. Leave missing facts unknown; adding a suggestion does not confirm you meet its requirements.</p></div>
         <div class="results-layout"><aside><div class="card summary"><p class="eyebrow">Your starting point</p><h3 id="summary-name">Your profile</h3><p id="summary-role"></p><ul id="summary-preferences" class="compact-list"></ul><button type="button" class="text-button" data-back="2">Edit work preferences</button><details><summary>Your experience examples</summary><p id="summary-evidence" class="preserve-lines small"></p></details></div><div class="card plan"><p class="eyebrow">One step at a time</p><h3>Your action list</h3><ol id="action-list"></ol></div></aside><div><div id="results-count" class="muted small" role="status" aria-live="polite"></div><div id="job-list" class="job-list"></div></div></div>
       </section>
       <div id="dashboard-link" hidden class="button-row"><button type="button" data-step="6" class="primary">Build my application pack</button><button type="button" data-step="5" class="primary">Continue to dashboard</button></div>

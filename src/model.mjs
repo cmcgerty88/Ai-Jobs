@@ -3,14 +3,14 @@ import { cleanProgress, GOALS } from './progress-model.mjs';
 export const STORAGE_KEY = 'rolebridge.private-profile.v1';
 export const MAX_TEXT = 100_000;
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const blankProfile = () => ({ name: '', currentRole: '', evidence: '', skills: '', country: 'unknown', currency: 'GBP', minimumSalary: '', locations: '', workMode: 'any', maxOfficeDays: '5', hours: 'any', sponsorship: 'unknown', goal: 'clarity', expectedOutcome: '' });
+export const blankProfile = () => ({ name: '', currentRole: '', targetRole: '', evidence: '', skills: '', country: 'unknown', currency: 'GBP', minimumSalary: '', locations: '', workMode: 'any', maxOfficeDays: '5', hours: 'any', sponsorship: 'unknown', goal: 'clarity', expectedOutcome: '' });
 export const blankState = () => ({ version: 1, profile: blankProfile(), jobs: [], roleDirections: [], feedback: { useful: '', return: '' }, cv: blankCv(), packs: [] });
 const text = (value, limit = 4000) => typeof value === 'string' ? value.slice(0, limit) : '';
 const choice = (value, options, fallback) => options.includes(value) ? value : fallback;
 export function cleanProfile(value = {}) {
   const p = value && typeof value === 'object' ? value : {};
   return {
-    name: text(p.name, 100), currentRole: text(p.currentRole, 160), evidence: text(p.evidence, 12000), skills: text(p.skills, 2000),
+    name: text(p.name, 100), currentRole: text(p.currentRole, 160), targetRole: text(p.targetRole, 160), evidence: text(p.evidence, 12000), skills: text(p.skills, 2000),
     country: choice(p.country, ['GB', 'IE', 'unknown'], 'unknown'), currency: choice(p.currency, ['GBP', 'EUR'], 'GBP'),
     minimumSalary: numericInput(p.minimumSalary), locations: text(p.locations, 300),
     workMode: choice(p.workMode, ['any', 'remote', 'hybrid', 'onsite'], 'any'),
@@ -46,7 +46,8 @@ export function cleanJob(value = {}) {
     essentials: choice(j.essentials, ['yes', 'no', 'unknown'], 'unknown'),
     locationFits: choice(j.locationFits, ['yes', 'no', 'unknown'], 'unknown'),
     status: choice(j.status, ['unchecked', 'open', 'closed'], 'unchecked'),
-    checkedAt: text(j.checkedAt, 40), selected: j.selected === true, progress: cleanProgress(j.progress)
+    checkedAt: text(j.checkedAt, 40), selected: j.selected === true, progress: cleanProgress(j.progress),
+    source: j.source?.provider === 'reed' ? { provider: 'reed', fetchedAt: text(j.source.fetchedAt, 40), expiresAt: text(j.source.expiresAt, 40), summaryOnly: true } : null
   };
 }
 export function serialiseState(value) {
