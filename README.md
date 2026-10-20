@@ -2,6 +2,8 @@
 
 A private device-only pilot for people exploring their next role after redundancy. The default journey asks for a situation and a short experience summary, then gives one useful next step before offering saving. Manual vacancy entry is retained. Suggested vacancies adds related-title searches on LinkedIn, Indeed and CV-Library plus a prepared UK Reed pool matched locally to a target role and confirmed skills. The external search links work independently of the Reed feed; direct imports from LinkedIn/Indeed/CV-Library are not connected. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
 
+The homepage also welcomes people looking for their next role without redundancy. Northern Ireland visitors can open NIJobs searches or nijobfinder from the same vacancy page. nijobfinder currently opens its jobs page with a copyable search phrase in RoleBridge; it does not claim to prefill an unverified search form. These are external destinations, not additional imported feeds.
+
 ## Try it
 
 With GitHub Pages configured for `main` → `/ (root)`, the app is served at:

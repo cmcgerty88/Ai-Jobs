@@ -104,13 +104,17 @@ test('popular-site searches encode only a chosen role/location and related title
   assert.equal(related[0].title, 'Release Manager');
   assert.ok(related.slice(1).every(o => o.reason.includes('Related title') && /change|delivery/i.test(o.title)));
   const links = jobSearchLinks(options[0].title, 'Belfast & nearby');
-  assert.deepEqual(links.map(l => new URL(l.url).hostname), ['www.linkedin.com', 'uk.indeed.com', 'www.cv-library.co.uk']);
+  assert.deepEqual(links.map(l => new URL(l.url).hostname), ['www.linkedin.com', 'uk.indeed.com', 'www.cv-library.co.uk', 'www.nijobs.com', 'www.nijobfinder.co.uk']);
   assert.equal(new URL(links[0].url).searchParams.get('keywords'), profile.targetRole);
   assert.equal(new URL(links[0].url).searchParams.get('location'), 'Belfast & nearby');
   assert.equal(new URL(links[1].url).searchParams.get('q'), profile.targetRole);
   assert.equal(new URL(links[2].url).searchParams.get('q'), profile.targetRole);
   assert.equal(new URL(links[2].url).searchParams.has('keywords'), false);
   assert.equal(new URL(links[2].url).searchParams.get('geo'), 'Belfast & nearby');
+  assert.equal(new URL(links[3].url).pathname, '/jobs/operations-%26-reporting-manager/in-belfast-%26-nearby');
+  assert.equal(links[4].url, 'https://www.nijobfinder.co.uk/jobs/');
+  assert.equal(links[4].manualSearch, true);
+  assert.equal(new URL(jobSearchLinks('Release Manager')[3].url).pathname, '/jobs/release-manager/in-northern-ireland');
   assert.ok(!JSON.stringify(links).includes('PRIVATE_')); assert.ok(!JSON.stringify(links).includes('Excel'));
   assert.equal(new URL(jobSearchLinks('Coordinator')[0].url).searchParams.get('location'), 'United Kingdom');
   assert.deepEqual(jobSearchLinks(''), []);

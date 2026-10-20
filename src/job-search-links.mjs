@@ -28,5 +28,11 @@ export function jobSearchLinks(role, location = '') {
   ].map(([site, base, parameters]) => {
     const url = new URL(base); for (const [key, value] of Object.entries(parameters)) url.searchParams.set(key, value);
     return { site, url: url.href };
-  });
+  }).concat([
+    {
+      site: 'NIJobs',
+      url: `https://www.nijobs.com/jobs/${encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-'))}/in-${encodeURIComponent((String(location || '').trim() || 'Northern Ireland').slice(0, 300).toLowerCase().replace(/\s+/g, '-'))}`
+    },
+    { site: 'nijobfinder', url: 'https://www.nijobfinder.co.uk/jobs/', manualSearch: true }
+  ]);
 }

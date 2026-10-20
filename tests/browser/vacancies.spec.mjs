@@ -136,7 +136,7 @@ test('manual vacancy entry is retained alongside popular-site searches and relat
   const requests = []; context.on('request', r => requests.push({ url: r.url(), referrer: r.headers().referer }));
   await begin(page);
   await expect(page.locator('#vacancy-pool-status')).toContainText('not connected yet');
-  await expect(page.locator('#jobsite-title')).toHaveText('Search LinkedIn, Indeed and CV-Library');
+  await expect(page.locator('#jobsite-title')).toHaveText('Search UK & Northern Ireland job sites');
   await page.locator('#vacancy-target').fill('Customer support coordinator');
   await expect(page.locator('#jobsite-role option')).toHaveCount(3);
   await page.locator('#vacancy-location').fill('Belfast');
@@ -147,11 +147,18 @@ test('manual vacancy entry is retained alongside popular-site searches and relat
   const cvLibraryUrl = new URL(await cvLibrary.getAttribute('href'));
   expect(cvLibraryUrl.searchParams.get('q')).toBe('Customer support coordinator');
   expect(cvLibraryUrl.searchParams.get('geo')).toBe('Belfast');
+  await expect(page.getByRole('link', { name: 'Search NIJobs', exact: true })).toHaveAttribute('href', 'https://www.nijobs.com/jobs/customer-support-coordinator/in-belfast');
+  await expect(page.getByRole('link', { name: 'Search nijobfinder', exact: true })).toHaveAttribute('href', 'https://www.nijobfinder.co.uk/jobs/');
+  await expect(page.locator('#nijobfinder-search-text')).toHaveValue('Customer support coordinator');
   await page.locator('#jobsite-role').selectOption({ index: 1 });
   await expect(page.locator('#jobsite-search-summary')).toContainText('Related title');
   const related = await page.locator('#jobsite-role').inputValue();
   expect(new URL(await linkedin.getAttribute('href')).searchParams.get('keywords')).toBe(related);
   expect(new URL(await cvLibrary.getAttribute('href')).searchParams.get('q')).toBe(related);
+  await expect(page.locator('#nijobfinder-search-text')).toHaveValue(related);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'Copy role for nijobfinder', exact: true }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(related);
   expect(requests.every(r => r.url.startsWith('http://127.0.0.1:8771/'))).toBeTruthy();
   await context.route('https://www.linkedin.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Synthetic search destination</title>' }));
   const popupPromise = page.waitForEvent('popup'); await linkedin.click(); const popup = await popupPromise; await popup.waitForLoadState();

@@ -27,9 +27,24 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
     const title = $('jobsite-role').value, place = $('vacancy-location').value.trim();
     const option = options.find(item => item.title === title);
     $('jobsite-search-summary').textContent = option ? `${option.reason}. Search for “${title}” in ${place || 'the United Kingdom'}.` : 'Enter a target role above to create searches, or review your skills to explore related titles.';
-    $('jobsite-links').replaceChildren(...jobSearchLinks(title, place).map(({ site, url }) => {
+    const links = jobSearchLinks(title, place);
+    $('jobsite-links').replaceChildren(...links.map(({ site, url }) => {
       const link = node('a', `Search ${site}`, 'secondary'); link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.setAttribute('aria-describedby', 'jobsite-sharing'); return link;
     }));
+    // No assumed query parameters for providers whose form contract is unverified.
+    if (links.some(link => link.manualSearch)) {
+      const help = node('div', undefined, 'jobsite-copy');
+      help.append(node('p', `NIJobs searches Northern Ireland when no location is entered. nijobfinder opens its jobs page; copy the role below and choose ${place || 'Northern Ireland'} in its location filter.`, 'hint'));
+      const label = node('label', 'Role to enter on nijobfinder'); label.htmlFor = 'nijobfinder-search-text';
+      const input = node('input'); input.id = 'nijobfinder-search-text'; input.readOnly = true; input.value = title;
+      const copy = node('button', 'Copy role for nijobfinder', 'text-button'); copy.type = 'button';
+      const status = node('p', '', 'hint'); status.setAttribute('role', 'status');
+      copy.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(input.value); status.textContent = 'Copied. Paste into nijobfinder’s search form and choose your location.'; }
+        catch { input.focus(); input.select(); status.textContent = 'Search text selected. Use your browser’s Copy action, then paste into nijobfinder.'; }
+      });
+      help.append(label, input, copy, status); $('jobsite-links').append(help);
+    }
   }
   function render() {
     const list = $('vacancy-suggestions'); list.replaceChildren();
