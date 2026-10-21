@@ -1,3 +1,4 @@
+import { initInterviewPrep } from './interview-prep-ui.mjs';
 import { initApplicationPack } from './application-ui.mjs';
 import { firstPlan } from './first-plan.mjs';
 import { cvProfileDraft } from './cv-profile.mjs';
@@ -16,7 +17,7 @@ const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
 let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
-let workspace, applicationPack, vacancies;
+let workspace, applicationPack, vacancies, interviewPrep;
 // Original field values remain the saved version until the person reviews the import.
 const pendingCvFields = new Map();
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
@@ -58,6 +59,7 @@ function showStep(step, focus = true) {
   if (step === 5) renderDashboard();
   if (step === 7) renderFirstPlan();
   if (step === 9) renderInterviewStarter();
+  if (step === 10) interviewPrep.open();
   if (step === 8) vacancies.open();
   if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
   $('dashboard-link').hidden = step !== 4;
@@ -67,13 +69,13 @@ function showStep(step, focus = true) {
   document.querySelector('.save-bar').hidden = step === 0;
   $('save-open').hidden = step === 7;
   if (focus) {
-    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title', 9: 'practice-title' }[step]);
+    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title', 9: 'practice-title', 10: 'prep-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
 function navigate(step) {
   syncProfile();
-  if (step > 1 && step !== 5 && !profileForm.checkValidity()) { showStep(1); profileForm.reportValidity(); return; }
+  if (step > 1 && ![5, 10].includes(step) && !profileForm.checkValidity()) { showStep(1); profileForm.reportValidity(); return; }
   if ([3, 4, 6].includes(step) && !preferencesForm.checkValidity()) { showStep(2); preferencesForm.reportValidity(); return; }
   showStep(step);
 }
@@ -525,6 +527,9 @@ workspace = initWorkspace({
   }, announce
 });
 applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce });
+interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce,
+  openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }
+});
 vacancies = initVacancies({
   getState: () => state, navigate,
   updateSearch: (target, location) => { $('targetRole').value = target; $('locations').value = location; syncProfile(); setSaveStatus(); },

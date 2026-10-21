@@ -1,6 +1,7 @@
 import { cleanCv, cleanPack } from './application-data.mjs';
 import { createPack, sourceKey, cvIssues, cvBlocks, interviewBlocks, keywordReview, plainText } from './application-content.mjs';
 import { interviewQuestions } from './interviews.mjs';
+import { cheatSheetBlocks } from './interview-prep-content.mjs';
 import { ROLE_CATALOGUE } from './roles.mjs';
 import { assessJob } from './matching.mjs';
 import { makePdf, makeDocx, downloadDocument } from './document-export.mjs';
@@ -111,7 +112,7 @@ export function initApplicationPack({ getState, changed, announce }) {
     if (pack.answers.some(a => a.answer.trim()) && !confirm('Replace these questions and delete their existing practice notes?')) { $('interview-role').value = pack.roleId; $('interview-focus').value = pack.focus; return; }
     pack.focus = focus; pack.roleId = roleId; pack.answers = []; changed(); renderQuestions(); renderPreview(); $('interview-export-status').textContent = 'Practice questions updated for your chosen focus.';
   });
-  const exports = ['download-cv-docx', 'download-cv-pdf', 'download-cv-text', 'download-interview-pdf', 'download-interview-text'];
+  const exports = ['download-cv-docx', 'download-cv-pdf', 'download-cv-text', 'download-interview-pdf', 'download-interview-text', 'download-interview-cheat'];
   async function exportFile(kind, format) {
     const state = getState(), job = getJob(), pack = getPack(); if (!job || !pack) return;
     const status = $(kind === 'cv' ? 'cv-export-status' : 'interview-export-status'); status.textContent = '';
@@ -120,13 +121,15 @@ export function initApplicationPack({ getState, changed, announce }) {
       const issues = cvIssues(state.cv, pack); if (issues.length) { status.textContent = issues.join(' '); return; }
       if (!$('cv-reviewed').checked) { status.textContent = 'Review the CV and confirm that its claims, qualifications and dates are accurate before downloading.'; $('cv-reviewed').focus(); return; }
     } else if ($('interview-focus').value.trim() !== pack.focus || $('interview-role').value !== pack.roleId) { status.textContent = 'Use Update practice questions first so the download matches your selected focus.'; return; }
-    const blocks = kind === 'cv' ? cvBlocks(state.cv, pack, job) : interviewBlocks(job, pack);
+    const cheat = format === 'cheat';
+    if (cheat) format = 'pdf';
+    const blocks = cheat ? cheatSheetBlocks(job, pack) : kind === 'cv' ? cvBlocks(state.cv, pack, job) : interviewBlocks(job, pack);
     const suffix = job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'target-role';
     exports.forEach(id => { $(id).disabled = true; }); status.textContent = 'Creating your document on this device…';
     try {
-      const bytes = format === 'pdf' ? await makePdf(blocks) : format === 'docx' ? await makeDocx(blocks) : plainText(blocks);
+      const bytes = format === 'pdf' ? await makePdf(blocks, { onePage: cheat }) : format === 'docx' ? await makeDocx(blocks) : plainText(blocks);
       const extension = format === 'text' ? 'txt' : format;
-      downloadDocument(bytes, `rolebridge-${kind === 'cv' ? 'cv' : 'interview'}-${suffix}.${extension}`, format === 'pdf' ? 'application/pdf' : format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/plain;charset=utf-8');
+      downloadDocument(bytes, `rolebridge-${kind === 'cv' ? 'cv' : 'interview'}-${cheat ? 'cheat-sheet-' : ''}${suffix}.${extension}`, format === 'pdf' ? 'application/pdf' : format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/plain;charset=utf-8');
       status.textContent = 'Download created. Open the file to check its contents and layout before sharing it. No application was submitted.';
       announce('Your document download is ready. Review it before sharing.');
     } catch (error) { status.textContent = error.message || 'The download could not be created. Try again or use the text format.'; }

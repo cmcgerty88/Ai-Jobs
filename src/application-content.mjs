@@ -2,6 +2,7 @@ import { normalise, hasPhrase, findSkillMentions } from './model.mjs';
 import { cleanPack } from './application-data.mjs';
 import { ROLE_CATALOGUE } from './roles.mjs';
 import { interviewQuestions } from './interviews.mjs';
+import { preparationEvidenceBlocks, suggestedRequirements } from './interview-prep-content.mjs';
 const lines = value => value.split('\n').map(s => s.trim()).filter(Boolean);
 export async function sourceKey(profile, job) {
   const value = JSON.stringify([profile.currentRole, profile.evidence, profile.skills, job.title, job.employer, job.description]);
@@ -23,7 +24,7 @@ export async function createPack(profile, job) {
   for (const passage of evidence) { if (used + passage.length + 1 <= 4000) { selectedEvidence.push(passage); used += passage.length + 1; } }
   return cleanPack({ jobId: job.id, sourceKey: await sourceKey(profile, job), summary: profile.currentRole,
     skills: skills.join(', '), highlights: selectedEvidence.join('\n'), roleId: suggestedRole(job),
-    focus: lines(job.description).slice(0, 3).map(s => s.slice(0, 280)).join('\n') });
+    focus: suggestedRequirements(job.description) });
 }
 export function cvIssues(cv, pack) {
   const issues = [];
@@ -64,11 +65,11 @@ export function interviewBlocks(job, pack) {
     block(`Practice focus: ${role?.title || 'General role preparation'}`),
     block('These are typical practice questions, not questions supplied or guaranteed by the employer. Confirm the role focus against the advert. Use only truthful examples.'),
     block('How to practise', 'heading'), block('Use Situation, Task, Action and Result (STAR). Keep most of the answer on what you personally did. State only results you can support. If experience is missing, explain the gap and how you would learn.'),
-    block('Your questions and notes', 'heading')];
+    ...preparationEvidenceBlocks(pack), block('Your questions and notes', 'heading')];
   interviewQuestions(job, pack).forEach((q, index) => {
     result.push(block(`${index + 1}. ${q.question}`, 'heading'), block(q.guidance));
     const answer = pack.answers.find(a => a.id === q.id)?.answer.trim();
-    result.push(block(answer ? `Your practice notes:\n${answer}` : 'Your practice notes: prepare a truthful example, your actions and the outcome.'));
+    result.push(block(answer ? `Your practice notes:\n${answer}` : 'Your practice notes — use only facts you can support.\nSituation / Task: __________________________________________\nMy actions: ______________________________________________\nResult / learning: _________________________________________'));
   });
   result.push(block('Before the interview', 'heading'), block('Check the format and time, research the employer using reliable sources, review the advert and your submitted CV, and choose two questions to ask. You can ask about interview adjustments without adding medical information to this pack.'));
   return result;

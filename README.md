@@ -125,3 +125,16 @@ CV exports are single-column DOCX, selectable-text PDF and UTF-8 text. Use the e
 Interview packs use an editorial question library and up to three requirements the user chooses from the advert. They include STAR guidance, candidate-written notes and questions to ask the employer; they are practice prompts, not actual employer questions or generated model answers. Unsupported roles receive honest general preparation plus the user’s requirements. Changing question focus asks before deleting existing answers.
 
 These application documents are **unencrypted downloads** intended for use outside the app; the builder explains this before download. They contain only the selected CV fields or interview questions/notes. They exclude raw CV text, work-preference constraints, other vacancies and unrelated profile fields. Encrypted workspace backups remain a separate feature. Downloaded documents cannot be deleted or expired remotely by the app. No application is sent automatically and no OpenAI service is connected.
+
+
+## Dedicated interview preparation
+
+Open **More tools → Interview prep**, or **Create my interview prep pack** from interview practice. This route works without completing the main profile first.
+
+1. Upload a PDF, DOCX or TXT CV, or reuse your workspace experience. Review the role, skills and work examples; unfamiliar layouts have a manual fallback. No contact information is required.
+2. Select a saved vacancy or paste a job title and description. Review one to three suggested advert priorities. Reed imports are short summaries: check the full advert and supply missing requirements.
+3. Confirm the evidence and create the pack. Download the **full prep pack PDF** and a separate **one-page cheat sheet PDF**. Both print in A4 portrait. The full pack also has a text fallback.
+
+The full pack includes reviewed CV examples, wording connections to advert priorities, explicit prompts where evidence is missing, typical role/requirement questions, STAR worksheets and a pre-interview checklist. It does not invent achievements, write answers or predict employer questions. The cheat sheet uses bounded excerpts with an ellipsis and fixed readable font sizes; its PDF is limited to one page, with full statements retained in the larger pack. Practice notes can be added through the existing pack editor and included in subsequent downloads. The existing editor also offers the cheat-sheet download.
+
+The dedicated flow stores a bounded reviewed interview-evidence snapshot with its vacancy pack, keeping the shared profile and edited CV draft unchanged. A new description creates a shortlist entry; reuse updates the existing pack. Changing questions asks before deleting practice notes. Unreviewed inputs and uploaded CV files/raw text never enter encrypted saving. Only reviewed role/skills/examples, advert priorities and existing job/pack fields are retained after creation when encrypted saving is enabled. Existing workspace limits, expiry and deletion apply. No OpenAI integration or external processing was added; downloaded documents are unencrypted and must be kept/deleted by the user.

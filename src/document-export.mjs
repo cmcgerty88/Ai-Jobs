@@ -21,7 +21,7 @@ async function fontBytes() {
   if (!fontPromise) fontPromise = fetch(new URL('../vendor/fonts/DejaVuSans.ttf', import.meta.url), { credentials: 'omit' }).then(response => { if (!response.ok) throw new Error('The PDF font could not be loaded. Try again or download Word/text.'); return response.arrayBuffer(); }).catch(error => { fontPromise = null; throw error; });
   return fontPromise;
 }
-export async function makePdf(blocks) {
+export async function makePdf(blocks, { onePage = false } = {}) {
   const [{ PDFDocument, rgb }, { default: fontkit }, fontData] = await Promise.all([
     import('../vendor/pdf-lib/pdf-lib.mjs'), import('../vendor/fontkit/fontkit.mjs'), fontBytes()
   ]);
@@ -36,6 +36,7 @@ export async function makePdf(blocks) {
   const width = 595.28, height = 841.89, margin = 50, available = width - margin * 2;
   let page, y;
   function nextPage() {
+    if (onePage && pdf.getPageCount()) throw new Error('The cheat sheet is too long for one page. Shorten your inputs and try again.');
     if (pdf.getPageCount() >= 30) throw new Error('This document exceeds 30 PDF pages. Shorten it before downloading.');
     page = pdf.addPage([width, height]); y = height - margin;
   }
@@ -59,15 +60,23 @@ export async function makePdf(blocks) {
   nextPage();
   for (const b of blocks) {
     if (!b.text.trim()) continue;
-    const size = b.style === 'title' ? 19 : b.style === 'heading' ? 12 : b.style === 'subtitle' ? 12 : 10.5;
-    const lineHeight = size * 1.5, lines = wrap(b.text, size);
-    if (b.style === 'heading') { y -= 9; if (y - lineHeight * Math.min(lines.length + 2, 5) < margin) nextPage(); }
+    const size = onePage ? (b.style === 'title' ? 18 : b.style === 'heading' || b.style === 'subtitle' ? 11.5 : 10.5) : b.style === 'title' ? 19 : b.style === 'heading' ? 12 : b.style === 'subtitle' ? 12 : 10.5;
+    const lineHeight = size * (onePage ? 1.3 : 1.5);
+    let lines = wrap(b.text, size);
+    if (onePage && b.maxLines && lines.length > b.maxLines) {
+      lines = lines.slice(0, b.maxLines);
+      let last = lines.at(-1);
+      while (last && font.widthOfTextAtSize(last + '…', size) > available) last = Array.from(last).slice(0, -1).join('');
+      lines[lines.length - 1] = last.trimEnd() + '…';
+    }
+    if (b.style === 'heading') { y -= onePage ? 4 : 9; if (y - lineHeight * Math.min(lines.length + 2, 5) < margin) nextPage(); }
+    if (onePage && b.style === 'heading') page.drawLine({ start: { x: margin, y: y + 1 }, end: { x: width - margin, y: y + 1 }, thickness: 0.4, color: rgb(0.72, 0.78, 0.75) });
     for (const line of lines) {
       if (y - lineHeight < margin) nextPage();
       y -= lineHeight;
-      page.drawText(line, { x: margin, y, size, font, color: rgb(0.08, 0.12, 0.14) });
+      page.drawText(line, { x: margin, y, size, font, color: onePage && ['heading', 'title'].includes(b.style) ? rgb(0.08, 0.28, 0.22) : rgb(0.08, 0.12, 0.14) });
     }
-    y -= b.style === 'title' ? 9 : 5;
+    y -= onePage ? 3 : b.style === 'title' ? 9 : 5;
   }
   return pdf.save();
 }
