@@ -27,7 +27,7 @@ async function source(page) {
   await page.locator('#prep-job-title').fill('Release Manager'); await page.locator('#prep-employer').fill('Synthetic Target Employer');
   await page.locator('#prep-description').fill(description); await page.locator('#prep-find-focus').click();
 }
-async function create(page) { await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click(); await expect(page.locator('#prep-result')).toBeVisible(); }
+async function create(page) { if (!(await page.locator('#prep-context-status').inputValue())) await page.locator('#prep-context-status').selectOption('none'); await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click(); await expect(page.locator('#prep-result')).toBeVisible(); }
 async function download(page, id) {
   const receiving = page.waitForEvent('download'); await page.locator('#' + id).click(); const file = await receiving;
   return { name: file.suggestedFilename(), bytes: await readFile(await file.path()) };
@@ -104,7 +104,7 @@ test('one-page export handles maximum-width content without shrinking text or lo
   const bytes = await page.evaluate(async () => {
     const { cheatSheetBlocks } = await import('/src/interview-prep-content.mjs'); const { makePdf } = await import('/src/document-export.mjs');
     const { cleanPack } = await import('/src/application-data.mjs');
-    const pack = cleanPack({ prep: { role: 'W'.repeat(160), skills: 'W'.repeat(2000), evidence: Array(3).fill('W'.repeat(1300)).join('\n') }, focus: Array(3).fill('W'.repeat(280)).join('\n'), roleId: 'release-manager', answers: [{ id: 'introduction', answer: 'W'.repeat(1000) }] });
+    const pack = cleanPack({ prep: { role: 'W'.repeat(160), skills: 'W'.repeat(2000), evidence: Array(3).fill('W'.repeat(1300)).join('\n') }, focus: Array(3).fill('W'.repeat(280)).join('\n'), roleId: 'release-manager', interviewContext: { status: 'provided', company: 'W'.repeat(2000), process: 'W'.repeat(2000) }, answers: [{ id: 'introduction', answer: 'W'.repeat(1000) }] });
     return [...await makePdf(cheatSheetBlocks({ title: 'W'.repeat(180), employer: 'W'.repeat(180) }, pack), { onePage: true })];
   });
   const { pages } = await pdfInfo(page, Buffer.from(bytes)); expect(pages).toHaveLength(1); expect(pages[0].bounded).toBeTruthy(); expect(pages[0].readable).toBeTruthy();
@@ -122,4 +122,41 @@ test('mobile manual fallback handles unsupported CVs and input edits require rev
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.screenshot({ path: '/tmp/interview-prep-mobile.png', fullPage: true });
   await create(page); const file = await download(page, 'prep-download-cheat'); expect((await pdfInfo(page, file.bytes)).pages).toHaveLength(1);
+});
+
+test('third input is required, reviewed context reaches both PDFs and is isolated per vacancy', async ({ page }) => {
+  await begin(page, true); await source(page);
+  await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click(); await expect(page.locator('#prep-result')).toBeHidden();
+  await expect(page.locator('#prep-context-status')).toBeFocused();
+  await page.locator('#prep-context-status').selectOption('provided'); await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click();
+  await expect(page.locator('#prep-error')).toContainText('Add company or interview-process notes');
+  const company = 'The team is improving release reliability.';
+  const process = 'Screening call: 45-minute technical panel; prepare a short presentation.';
+  await page.locator('#prep-company').fill(company); await page.locator('#prep-process').fill(process);
+  await expect(page.locator('#prep-reviewed')).not.toBeChecked();
+  expect(JSON.stringify(await saved(page))).not.toContain('release reliability');
+  await create(page); await expect.poll(async () => (await saved(page)).packs[0]?.interviewContext.process).toBe(process);
+  const full = await download(page, 'prep-download-full'), cheat = await download(page, 'prep-download-cheat');
+  const fullText = (await pdfInfo(page, full.bytes)).pages.map(p => p.text).join(' '), sheet = await pdfInfo(page, cheat.bytes);
+  for (const text of [fullText, sheet.pages[0].text]) { expect(text).toContain('release reliability'); expect(text).toContain('45-minute technical panel'); }
+  expect(fullText).toContain('How will you prepare for the interview process'); expect(sheet.pages).toHaveLength(1); expect(sheet.pages[0].bounded).toBeTruthy();
+  await page.locator('#prep-notes').click();
+  await page.locator('#answer-context-company').locator('..').locator('summary').click();
+  await page.locator('#answer-context-company').fill('Company-specific practice answer to remove only with confirmation.');
+  await page.locator('#answer-introduction').fill('Introduction notes to keep.');
+  await expect.poll(async () => (await saved(page)).packs[0].answers.length).toBe(2);
+  await page.reload(); await page.locator('#password').fill(password); await page.locator('#create-workspace').click(); await tool(page, 10);
+  await expect(page.locator('#prep-company')).toHaveValue(company); await expect(page.locator('#prep-process')).toHaveValue(process);
+  await page.locator('#prep-company').fill('An unreviewed change'); expect((await saved(page)).packs[0].interviewContext.company).toBe(company);
+  await page.locator('#prep-job').selectOption(''); await expect(page.locator('#prep-context-status')).toHaveValue(''); await expect(page.locator('#prep-company')).toHaveValue('');
+  const originalId = (await saved(page)).jobs[0].id;
+  await page.locator('#prep-job').selectOption(originalId); await expect(page.locator('#prep-company')).toHaveValue(company);
+  await page.locator('#prep-context-status').selectOption('none'); await page.locator('#prep-reviewed').check();
+  page.once('dialog', dialog => dialog.dismiss()); await page.locator('#prep-create').click();
+  await expect(page.locator('#prep-result')).toBeHidden(); expect((await saved(page)).packs[0].interviewContext.status).toBe('provided');
+  page.once('dialog', dialog => dialog.accept()); await create(page);
+  await expect.poll(async () => (await saved(page)).packs[0].interviewContext.status).toBe('none');
+  expect((await saved(page)).packs[0].interviewContext.company).toBe('');
+  expect((await saved(page)).packs[0].answers).toEqual([{ id: 'introduction', answer: 'Introduction notes to keep.' }]);
+  const none = await download(page, 'prep-download-text'); expect(none.bytes.toString()).toContain('no extra information yet'); expect(none.bytes.toString()).not.toContain(company);
 });

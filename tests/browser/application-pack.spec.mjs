@@ -25,6 +25,10 @@ async function addJob(page, title = 'Reporting analyst') {
 async function createPack(page) {
   await page.getByRole('button', { name: 'Build CV & interview pack', exact: true }).first().click();
   await page.locator('#pack-create').click(); await expect(page.locator('#pack-editor')).toBeVisible();
+  await page.locator('#download-interview-pdf').click();
+  await expect(page.locator('#interview-export-status')).toContainText('Review company & interview information first');
+  await page.locator('#interview-context-open').click(); await page.locator('#prep-context-status').selectOption('none');
+  await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click(); await page.locator('#prep-notes').click();
 }
 async function career(page) {
   await page.locator('#cv-email').fill('synthetic@example.com');

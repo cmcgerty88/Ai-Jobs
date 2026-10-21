@@ -1,3 +1,4 @@
+import { contextQuestions } from './interview-context.mjs';
 // Editorial practice prompts, not questions obtained from an employer.
 // Keys follow the existing role library; no inferred candidate qualifications.
 export const ROLE_QUESTIONS = {
@@ -95,6 +96,7 @@ export function interviewQuestions(job, pack) {
   ];
   (ROLE_QUESTIONS[pack.roleId] || []).forEach(([question, guidance], i) => questions.push({ id: `${pack.roleId}-${i}`, question, guidance }));
   pack.focus.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3).forEach((requirement, i) => questions.push({ id: `requirement-${i}`, question: `What example can you give for this requirement: “${requirement}”?`, guidance: 'Identify what you actually did, the outcome you can support and any gap you need to discuss honestly. This is a practice prompt based on the text you chose.' }));
+  questions.push(...contextQuestions(pack));
   questions.push({ id: 'closing', question: 'What would you like to ask us?', guidance: 'Ask about first-90-day priorities, how success is measured, support for learning and any unclear working conditions.' });
   return questions;
 }

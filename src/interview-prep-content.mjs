@@ -1,5 +1,6 @@
 import { findSkillMentions, hasPhrase, normalise } from './model.mjs';
 import { interviewQuestions } from './interviews.mjs';
+import { cleanInterviewContext } from './interview-context.mjs';
 
 const lines = value => String(value || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
 const block = (text, style = 'body', maxLines) => ({ text, style, maxLines });
@@ -48,16 +49,20 @@ export function preparationEvidenceBlocks(pack) {
 // Explicit line budgets keep this readable on one A4 page. Full source statements
 // remain in the preparation pack; shortened preview excerpts end in an ellipsis.
 export function cheatSheetBlocks(job, pack) {
+  const context = cleanInterviewContext(pack.interviewContext), hasContext = context.status === 'provided';
   const source = interviewEvidence(pack), examples = lines(source.evidence).slice(0, 3);
   const questions = interviewQuestions(job, pack).filter(q => !['motivation', 'closing'].includes(q.id)).slice(0, 3);
   return [block('Interview cheat sheet', 'title', 1), block(`${job.title}${job.employer ? ' · ' + job.employer : ''}`, 'subtitle', 2),
-    block(`My starting point: ${source.role}. Skills: ${source.skills || 'Review the examples below.'}`, 'body', 3),
+    block(`My starting point: ${source.role}. Skills: ${source.skills || 'Review the examples below.'}`, 'body', hasContext ? 2 : 3),
+    ...(hasContext ? [block('Company & process — my supplied notes', 'heading', 1),
+      ...(context.company ? [block('Company: ' + context.company, 'body', 2)] : []),
+      ...(context.process ? [block('Interview: ' + context.process, 'body', 2)] : [])] : []),
     block('My examples — prompts, not a script', 'heading', 1),
-    ...examples.map((example, i) => block(`${i + 1}. ${example}`, 'body', 3)),
+    ...examples.map((example, i) => block(`${i + 1}. ${example}`, 'body', hasContext ? 2 : 3)),
     block('Advert priorities to prepare', 'heading', 1),
     ...lines(pack.focus).slice(0, 3).map((requirement, i) => block(`${i + 1}. ${requirement}`, 'body', 2)),
     block('Questions to rehearse', 'heading', 1),
-    ...questions.map(q => block(q.question, 'body', 2)),
+    ...questions.slice(0, hasContext ? 2 : 3).map(q => block(q.question, 'body', 2)),
     ...(pack.answers.find(a => a.answer.trim()) ? [block('My practice-note reminder', 'heading', 1), block(pack.answers.find(a => a.answer.trim()).answer, 'body', 3)] : []),
     block('Before I join', 'heading', 1),
     block('STAR: Situation → Task → Action → Result. Be clear about my contribution; use only results I can support. Check the time, format and connection or travel.', 'body', 3),

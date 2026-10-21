@@ -2,17 +2,19 @@ import { cleanCv, cleanPack } from './application-data.mjs';
 import { createPack, sourceKey, cvIssues, cvBlocks, interviewBlocks, keywordReview, plainText } from './application-content.mjs';
 import { interviewQuestions } from './interviews.mjs';
 import { cheatSheetBlocks } from './interview-prep-content.mjs';
+import { cleanInterviewContext } from './interview-context.mjs';
 import { ROLE_CATALOGUE } from './roles.mjs';
 import { assessJob } from './matching.mjs';
 import { makePdf, makeDocx, downloadDocument } from './document-export.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
-export function initApplicationPack({ getState, changed, announce }) {
+export function initApplicationPack({ getState, changed, announce, prepareInterview }) {
   let selectedId = '', generation = 0;
   const baseForm = $('cv-base-form'), draftForm = $('cv-draft-form');
   baseForm.reset(); draftForm.reset(); $('cv-reviewed').checked = false; $('interview-focus').value = '';
   const getJob = () => getState().jobs.find(j => j.id === selectedId);
   const getPack = () => getState().packs.find(p => p.jobId === selectedId);
+  $('interview-context-open').addEventListener('click', () => prepareInterview(selectedId));
   const option = (value, label) => { const el = node('option', label); el.value = value; return el; };
   $('interview-role').append(option('', 'General / another role'), ...ROLE_CATALOGUE.map(r => option(r.id, r.title)));
   function invalidateReview() { $('cv-reviewed').checked = false; $('cv-export-status').textContent = ''; }
@@ -116,6 +118,10 @@ export function initApplicationPack({ getState, changed, announce }) {
   async function exportFile(kind, format) {
     const state = getState(), job = getJob(), pack = getPack(); if (!job || !pack) return;
     const status = $(kind === 'cv' ? 'cv-export-status' : 'interview-export-status'); status.textContent = '';
+    if (kind !== 'cv' && cleanInterviewContext(pack.interviewContext).status === 'unknown') {
+      status.textContent = 'Review company & interview information first: add what you know, or confirm you have no extra information yet.';
+      $('interview-context-open').focus(); return;
+    }
     if (kind === 'cv') {
       if (!state.cv.anonymous && !baseForm.reportValidity()) { status.textContent = 'Check your contact details, including the email address.'; return; }
       const issues = cvIssues(state.cv, pack); if (issues.length) { status.textContent = issues.join(' '); return; }

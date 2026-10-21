@@ -2,6 +2,7 @@ import { normalise, hasPhrase, findSkillMentions } from './model.mjs';
 import { cleanPack } from './application-data.mjs';
 import { ROLE_CATALOGUE } from './roles.mjs';
 import { interviewQuestions } from './interviews.mjs';
+import { contextBlocks } from './interview-context.mjs';
 import { preparationEvidenceBlocks, suggestedRequirements } from './interview-prep-content.mjs';
 const lines = value => value.split('\n').map(s => s.trim()).filter(Boolean);
 export async function sourceKey(profile, job) {
@@ -65,7 +66,7 @@ export function interviewBlocks(job, pack) {
     block(`Practice focus: ${role?.title || 'General role preparation'}`),
     block('These are typical practice questions, not questions supplied or guaranteed by the employer. Confirm the role focus against the advert. Use only truthful examples.'),
     block('How to practise', 'heading'), block('Use Situation, Task, Action and Result (STAR). Keep most of the answer on what you personally did. State only results you can support. If experience is missing, explain the gap and how you would learn.'),
-    ...preparationEvidenceBlocks(pack), block('Your questions and notes', 'heading')];
+    ...contextBlocks(pack), ...preparationEvidenceBlocks(pack), block('Your questions and notes', 'heading')];
   interviewQuestions(job, pack).forEach((q, index) => {
     result.push(block(`${index + 1}. ${q.question}`, 'heading'), block(q.guidance));
     const answer = pack.answers.find(a => a.id === q.id)?.answer.trim();

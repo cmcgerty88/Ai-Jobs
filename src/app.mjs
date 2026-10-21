@@ -526,7 +526,9 @@ workspace = initWorkspace({
     showStep(restored && complete ? 5 : restored ? 1 : 0);
   }, announce
 });
-applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce });
+applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce,
+  prepareInterview: jobId => { showStep(10); interviewPrep.open(jobId); }
+});
 interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce,
   openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }
 });

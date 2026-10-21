@@ -39,3 +39,22 @@ test('reviewed interview snapshots are bounded, survive restore and disappear wi
   assert.equal(cleanPack({ prep: { role: 'x'.repeat(500), evidence: 'x'.repeat(6000), skills: 'x'.repeat(3000) } }).prep.evidence.length, 4000);
   state.jobs = []; assert.deepEqual(restoreState(serialiseState(state)).packs, []);
 });
+
+test('company and screening-call notes stay separate from CV claims and survive only as bounded reviewed context', async () => {
+  const { cleanInterviewContext } = await import('../src/interview-context.mjs');
+  const { interviewQuestions } = await import('../src/interviews.mjs');
+  const context = { status: 'provided', company: 'The team is improving release reliability.', process: 'Screening call: a 45-minute technical panel and a short presentation.', secret: 'EXCLUDED' };
+  const prepared = cleanPack({ ...pack, interviewContext: context });
+  const output = plainText(interviewBlocks(job, prepared));
+  assert.match(output, /improving release reliability/); assert.match(output, /45-minute technical panel/);
+  assert.match(output, /not independently verified/); assert.match(output, /How does your experience connect to the company priorities/);
+  assert.equal(prepared.prep.evidence, pack.prep.evidence); assert.doesNotMatch(JSON.stringify(prepared), /EXCLUDED/);
+  assert.match(plainText(cheatSheetBlocks(job, prepared)), /45-minute technical panel/);
+  assert.ok(interviewQuestions(job, prepared).length <= 12);
+  const state = blankState(); state.jobs = [job]; state.packs = [prepared];
+  assert.deepEqual(restoreState(serialiseState(state)).packs[0].interviewContext, cleanInterviewContext(context));
+  assert.equal(cleanInterviewContext({ status: 'provided', company: 'x'.repeat(5000) }).company.length, 2000);
+  assert.equal(cleanInterviewContext({ status: 'provided', company: '   ' }).status, 'unknown');
+  assert.deepEqual(cleanInterviewContext({ ...context, status: 'none' }), { status: 'none', company: '', process: '' });
+  assert.equal(cleanPack({}).interviewContext.status, 'unknown');
+});
