@@ -2,6 +2,7 @@ import { initApplicationPack } from './application-ui.mjs';
 import { firstPlan } from './first-plan.mjs';
 import { initVacancies } from './vacancy-ui.mjs';
 import { skillEvidence, canonicalSkill } from './skills.mjs';
+import { extractWorkExamples, mergeWorkExamples } from './work-examples.mjs';
 import { blankState, cleanProfile, cleanJob, safeJobUrl } from './model.mjs';
 import { initWorkspace } from './workspace.mjs';
 import { diagnose, STAGES, GOALS, cleanProgress, progressError } from './progress.mjs';
@@ -229,9 +230,53 @@ function showSkillSuggestions() {
   evidence.append(node('p', 'Extracted text with case and spacing normalised. These excerpts stay with the raw CV in this tab and are not saved to your profile.', 'hint'), excerpts);
   container.append(evidence);
 }
-$('clear-cv').addEventListener('click', () => { fileGeneration++; $('cv-text').value = ''; $('cv-file').value = ''; $('cv-text').disabled = false; $('cv-file').disabled = false; $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; $('cv-status').textContent = 'Raw CV cleared. Your reviewed profile is unchanged.'; });
+function clearWorkSuggestions() { $('work-suggestions').replaceChildren(); $('work-suggestions').hidden = true; }
+function showWorkSuggestions() {
+  const result = extractWorkExamples($('cv-text').value);
+  const container = $('work-suggestions'); container.replaceChildren(); container.hidden = false;
+  container.append(node('h4', 'Review examples from your most recent role'), node('p', result.message, 'hint'));
+  if (!result.roles.length) return;
+  const label = node('label', 'Role to take examples from'); label.htmlFor = 'work-example-role';
+  const select = node('select'); select.id = 'work-example-role';
+  const placeholder = node('option', 'Choose your most recent role'); placeholder.value = ''; select.append(placeholder);
+  for (const role of result.roles) {
+    const option = node('option', `${role.label} · ${role.date}`); option.value = role.id; select.append(option);
+  }
+  select.value = result.suggested;
+  const preview = node('div'); preview.id = 'work-example-preview';
+  const status = node('p', '', 'hint'); status.id = 'work-example-status'; status.setAttribute('role', 'status');
+  const render = () => {
+    preview.replaceChildren(); status.textContent = '';
+    const role = result.roles.find(item => item.id === select.value);
+    if (!role) return;
+    preview.append(node('p', `${role.examples.length} of up to 3 examples found. These are source statements, not verified outcomes. Check they describe work you did, and remove confidential details after adding.`, 'hint'));
+    if (!role.examples.length) {
+      preview.append(node('p', 'No clear work statements were recognised in this entry. Highlight the relevant CV text and use “Add selected text to my examples”, or type your own example.', 'hint'));
+      return;
+    }
+    for (const example of role.examples) {
+      const row = node('label', undefined, 'check');
+      const checkbox = node('input'); checkbox.type = 'checkbox'; checkbox.checked = true; checkbox.value = example;
+      row.append(checkbox, node('span', example)); preview.append(row);
+    }
+    const add = node('button', 'Add selected examples', 'secondary'); add.type = 'button'; add.id = 'add-work-examples';
+    add.addEventListener('click', () => {
+      const selected = [...preview.querySelectorAll('input:checked')].map(input => input.value);
+      if (!selected.length) { status.textContent = 'Select at least one example to add.'; return; }
+      const merged = mergeWorkExamples($('evidence').value, selected);
+      if (merged.full) { status.textContent = 'These examples would exceed the field limit. Nothing was changed. Select fewer examples or shorten the existing text.'; return; }
+      if (merged.count) { $('evidence').value = merged.value; profileChanged(); }
+      status.textContent = merged.count ? `Added ${merged.count} ${merged.count === 1 ? 'example' : 'examples'}. Existing text was kept. Review the wording before confirming your profile.` : 'These examples are already in your work examples field.';
+      $('evidence').focus(); $('evidence').scrollIntoView({ behavior: 'instant', block: 'center' });
+    });
+    preview.append(add);
+  };
+  select.addEventListener('change', render); container.append(label, select, preview, status); render();
+}
+$('find-work-examples').addEventListener('click', showWorkSuggestions);
+$('clear-cv').addEventListener('click', () => { fileGeneration++; $('cv-text').value = ''; $('cv-file').value = ''; $('cv-text').disabled = false; $('cv-file').disabled = false; $('skill-chips').replaceChildren(); $('skill-suggestions').hidden = true; clearWorkSuggestions(); $('cv-status').textContent = 'Raw CV cleared. Your reviewed profile is unchanged.'; });
 $('find-skills').addEventListener('click', showSkillSuggestions);
-$('cv-text').addEventListener('input', () => { $('skill-suggestions').hidden = true; $('cv-status').textContent = 'CV text is held only in this tab. Review it and add relevant examples to your profile.'; });
+$('cv-text').addEventListener('input', () => { $('skill-suggestions').hidden = true; clearWorkSuggestions(); $('cv-status').textContent = 'CV text is held only in this tab. Review it and add relevant examples to your profile.'; });
 $('use-selection').addEventListener('click', () => {
   const input = $('cv-text'); const selected = input.value.slice(input.selectionStart, input.selectionEnd).trim();
   if (!selected) { $('cv-status').textContent = 'First highlight a passage in the CV-text box, then choose “Add selected text to my examples”.'; input.focus(); return; }
@@ -242,6 +287,7 @@ $('use-selection').addEventListener('click', () => {
 $('cv-file').addEventListener('change', async () => {
   const file = $('cv-file').files[0]; if (!file) return;
   const generation = ++fileGeneration;
+  clearWorkSuggestions();
   $('cv-file').disabled = true; $('cv-text').disabled = true;
   $('cv-status').textContent = 'Reading your CV on this device…'; $('cv-status').classList.remove('error-text');
   try {
@@ -249,6 +295,7 @@ $('cv-file').addEventListener('change', async () => {
     $('cv-text').value = text;
     $('cv-status').textContent = `Read ${file.name} in your browser. Review the text and add relevant examples to your profile.`;
     showSkillSuggestions();
+    showWorkSuggestions();
   } catch (error) {
     if (generation !== fileGeneration) return;
     $('cv-status').textContent = error.message || 'The file could not be read. Please paste your CV text instead.';
