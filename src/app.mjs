@@ -1,5 +1,7 @@
 import { initApplicationPack } from './application-ui.mjs';
 import { firstPlan } from './first-plan.mjs';
+import { cvProfileDraft } from './cv-profile.mjs';
+import { interviewQuestions } from './interviews.mjs';
 import { initVacancies } from './vacancy-ui.mjs';
 import { skillEvidence, canonicalSkill } from './skills.mjs';
 import { extractWorkExamples, mergeWorkExamples } from './work-examples.mjs';
@@ -15,6 +17,8 @@ const node = (tag, text, className) => { const value = document.createElement(ta
 let state = blankState();
 let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
 let workspace, applicationPack, vacancies;
+// Original field values remain the saved version until the person reviews the import.
+const pendingCvFields = new Map();
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
 
 function announce(text) { $('announcement').textContent = ''; requestAnimationFrame(() => { $('announcement').textContent = text; }); }
@@ -34,6 +38,10 @@ function updateProfilePrompt() {
 function setSaveStatus() { workspace?.changed(); }
 function profileChanged(event) {
   if (event?.target !== $('profile-confirmed')) $('profile-confirmed').checked = false;
+  if ($('profile-confirmed').checked && pendingCvFields.size) {
+    pendingCvFields.clear();
+    $('cv-draft-status').textContent = 'Profile reviewed. These details can now be included if you choose encrypted saving.';
+  }
   syncProfile(); setSaveStatus();
   updateProfilePrompt();
 }
@@ -49,6 +57,7 @@ function showStep(step, focus = true) {
   if (step === 4) renderResults();
   if (step === 5) renderDashboard();
   if (step === 7) renderFirstPlan();
+  if (step === 9) renderInterviewStarter();
   if (step === 8) vacancies.open();
   if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
   $('dashboard-link').hidden = step !== 4;
@@ -58,7 +67,7 @@ function showStep(step, focus = true) {
   document.querySelector('.save-bar').hidden = step === 0;
   $('save-open').hidden = step === 7;
   if (focus) {
-    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title' }[step]);
+    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title', 9: 'practice-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
@@ -95,9 +104,8 @@ function renderFirstPlan() {
   $('first-plan-evidence').textContent = state.profile.evidence;
   $('first-plan-limit').textContent = plan.limitation;
   const button = $('first-plan-continue');
-  const findVacancies = plan.step !== 5 && Boolean(state.profile.targetRole.trim() || state.profile.skills.trim());
-  button.textContent = findVacancies ? 'Find suggested vacancies' : plan.action;
-  button.onclick = () => navigate(findVacancies ? 8 : plan.step);
+  button.textContent = plan.action;
+  button.onclick = () => navigate(plan.step);
   const list = $('first-plan-roles'); list.replaceChildren();
   if (plan.roles.length) list.append(node('h3', 'Directions for your role focus'));
   for (const { role, matches, context } of plan.roles) {
@@ -107,6 +115,42 @@ function renderFirstPlan() {
     card.append(node('p', role.checks[0], 'hint')); list.append(card);
   }
 }
+
+function renderInterviewStarter() {
+  const profile = state.profile;
+  const role = exploreRoles(profile).find(result => result.context.direct)?.role;
+  const questions = interviewQuestions({ title: profile.targetRole || profile.currentRole, employer: '' }, { roleId: role?.id || '', focus: '' });
+  $('practice-evidence').textContent = profile.evidence;
+  const list = $('starter-questions'); list.replaceChildren();
+  for (const question of questions) {
+    const details = node('details', undefined, 'card practice-question');
+    details.append(node('summary', question.question), node('p', question.guidance, 'muted small'));
+    list.append(details);
+  }
+}
+
+function fillFromCv() {
+  const draft = cvProfileDraft($('cv-text').value);
+  const filled = [];
+  const labels = { currentRole: 'recent role', skills: 'skills', evidence: 'work examples' };
+  for (const [field, value] of Object.entries(draft)) {
+    if (!value || $(field).value.trim()) continue;
+    if (!pendingCvFields.has(field)) pendingCvFields.set(field, $(field).value);
+    $(field).value = value; filled.push(labels[field]);
+  }
+  $('cv-draft-status').hidden = false;
+  $('cv-draft-status').textContent = filled.length
+    ? `Draft added: ${filled.join(', ')}. Review the fields below, remove anything inaccurate or confidential, and tick the confirmation. Imported details are not saved until you do. Your target role is your choice.`
+    : 'Existing entries have been kept. Any missing fields need your input; the reader may not recognise every CV layout. Open “Paste text or review what was found” to choose a role or add suggestions.';
+  profileChanged();
+  showSkillSuggestions(); showWorkSuggestions();
+  $('cv-status').textContent = filled.length ? 'Your draft is ready to review below.' : 'CV read. Review your profile below and complete any gaps.';
+}
+$('fill-from-cv').addEventListener('click', fillFromCv);
+$('manual-profile').addEventListener('click', () => {
+  $('cv-reader').open = false;
+  $('currentRole').focus(); $('currentRole').scrollIntoView({ behavior: 'instant', block: 'center' });
+});
 
 function renderSavedDirections() {
   const list = $('saved-directions'); list.replaceChildren();
@@ -293,9 +337,8 @@ $('cv-file').addEventListener('change', async () => {
   try {
     const text = await readCv(file); if (generation !== fileGeneration) return;
     $('cv-text').value = text;
-    $('cv-status').textContent = `Read ${file.name} in your browser. Review the text and add relevant examples to your profile.`;
-    showSkillSuggestions();
-    showWorkSuggestions();
+    fillFromCv();
+    $('cv-status').textContent = `Read ${file.name} in your browser. ` + $('cv-status').textContent;
   } catch (error) {
     if (generation !== fileGeneration) return;
     $('cv-status').textContent = error.message || 'The file could not be read. Please paste your CV text instead.';
@@ -356,6 +399,8 @@ function renderResults() {
   if (!state.jobs.length) {
     const empty = node('div', undefined, 'empty-state'); empty.append(node('h3', 'Start with one real vacancy.'), node('p', 'Bring a job you are considering. You will see which requirements fit, which conflict and which still need checking.'));
     const button = node('button', 'Add your first vacancy', 'primary'); button.type = 'button'; button.addEventListener('click', () => openJob()); empty.append(button); container.append(empty);
+    const find = node('button', 'Find suggested vacancies', 'secondary'); find.type = 'button'; find.addEventListener('click', () => navigate(8));
+    const alternatives = node('div', undefined, 'button-row'); alternatives.append(find); empty.append(alternatives);
   }
   const order = { consider: 0, investigate: 1, skip: 2 };
   comparisons.sort((a, b) => order[a.result.status] - order[b.result.status]);
@@ -468,8 +513,11 @@ for (const id of ['privacy-open', 'privacy-footer']) $(id).addEventListener('cli
 profileForm.reset(); preferencesForm.reset(); jobForm.reset();
 $('cv-text').value = ''; $('cv-file').value = '';
 workspace = initWorkspace({
-  getState: () => { syncProfile(); return state; },
-  setState: value => { state = value; fillProfile(); },
+  getState: () => {
+    syncProfile();
+    return { ...state, profile: { ...state.profile, ...Object.fromEntries(pendingCvFields) } };
+  },
+  setState: value => { pendingCvFields.clear(); state = value; fillProfile(); },
   start: ({ restored }) => {
     document.querySelector('.hero').hidden = true; $('demo-link').hidden = true;
     const complete = state.profile.currentRole.trim() && state.profile.evidence.trim().length >= 20;

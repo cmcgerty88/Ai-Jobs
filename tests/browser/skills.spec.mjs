@@ -33,13 +33,11 @@ test('CV suggestions show evidence, require confirmation and keep technical role
   const cv = 'PRIVATE_SOURCE_MARKER. Release planning and IT change control. Used ITIL, Jira and CI/CD. Completed UAT and managed stakeholder engagement. No Python experience.';
   await page.locator('#cv-file').setInputFiles({ name: 'synthetic-release.txt', mimeType: 'text/plain', buffer: Buffer.from(cv) });
   await expect(page.locator('#skill-chips')).toContainText('Release management');
-  await expect(page.locator('#skills')).toHaveValue('');
+  await expect(page.locator('#skills')).toHaveValue(/Release management/);
+  await expect(page.locator('#profile-confirmed')).not.toBeChecked();
   await expect(page.locator('#skill-chips').getByRole('button', { name: 'Python', exact: true })).toHaveCount(0);
   await page.locator('#skill-chips summary').click();
   await expect(page.locator('#skill-chips details')).toContainText('release planning');
-  for (const label of ['Release management', 'IT change management', 'ITIL', 'CI/CD', 'User acceptance testing', 'Stakeholder management']) {
-    await page.locator('#skill-chips').getByRole('button', { name: label, exact: true }).click();
-  }
   await page.locator('#currentRole').fill('Release Manager');
   await page.locator('#targetRole').fill('Release Manager');
   await page.locator('#evidence').fill('Coordinated release readiness meetings and tracked dependencies.');

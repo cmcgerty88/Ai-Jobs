@@ -21,7 +21,8 @@ test('latest-role examples are reviewed then merged, persist only when chosen, a
   await page.locator('#cv-file').setInputFiles({ name: 'synthetic.txt', mimeType: 'text/plain', buffer: Buffer.from(cv) });
   await expect(page.locator('#work-example-role option:checked')).toContainText('Release Manager');
   await expect(page.locator('#work-example-preview input[type="checkbox"]')).toHaveCount(3);
-  await expect(page.locator('#evidence')).toHaveValue('');
+  await expect(page.locator('#evidence')).toHaveValue(/Coordinated production releases/);
+  await expect(page.locator('#currentRole')).toHaveValue('Release Manager');
   await expect(page.locator('#work-example-preview')).not.toContainText('research project');
   await page.locator('#evidence').fill('My existing example of coordinating work.');
   await page.locator('#profile-confirmed').check();

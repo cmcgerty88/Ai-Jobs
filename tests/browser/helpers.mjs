@@ -1,6 +1,7 @@
 export async function expand(page, selector) {
   const details = page.locator(selector);
   if (!(await details.evaluate(el => el.open))) await details.locator(':scope > summary').click();
+  if (selector === '#cv-reader') await expand(page, '#cv-tools');
 }
 export async function tool(page, step) {
   await expand(page, '#tool-menu');

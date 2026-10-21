@@ -10,7 +10,9 @@ async function begin(page, prefix = '/') {
   await page.locator('#evidence').fill('Prepared weekly reports and planned customer service schedules.');
   await page.locator('#skills').fill('Excel, customer service, scheduling');
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
-  await page.locator('#first-plan-continue').click(); await expect(page.locator('#step-8')).toBeVisible();
+  await page.locator('#first-plan-continue').click(); await expect(page.locator('#step-3')).toBeVisible();
+  await page.locator('[data-role-id="operations-manager"]').getByRole('button', { name: 'Find vacancies for this direction' }).click();
+  await expect(page.locator('#step-8')).toBeVisible();
 }
 async function filter(page, target, location = '') {
   await page.locator('#vacancy-target').fill(target); await page.locator('#vacancy-location').fill(location);

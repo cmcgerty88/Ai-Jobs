@@ -16,9 +16,9 @@ export function firstPlan(state, now = Date.now()) {
   };
   if (goal === 'offers') return {
     title: 'Practise one specific example for your next interview',
-    detail: 'Choose one essential requirement from a real advert. Explain the situation, your task, what you personally did and the result. Use only facts you can support; practise saying it aloud.',
+    detail: 'Start with a practice question and one of your work examples. Explain the situation, your task, what you personally did and the result. Use only facts you can support; practise saying it aloud.',
     basis: 'You want help turning interviews into offers. Your experience example gives you something concrete to practise, but we don’t yet have recorded outcomes to identify a pattern.',
-    action: 'Choose a vacancy to practise for', step: 4, roles, limitation
+    action: 'Practise interview answers', step: 9, roles, limitation
   };
   if (goal === 'interviews' || goal === 'applications') return {
     title: 'Check the evidence in one application',
@@ -33,7 +33,7 @@ export function firstPlan(state, now = Date.now()) {
       : 'Find one advert for work you have done or would like to explore. Check the essential requirements against your experience. You can compare it here even if its title isn’t in our role library.',
     basis: roles.length ? 'These directions use your target role (or current role when no target is entered) and confirmed skills. A title connection is not a judgement that you are qualified.'
       : 'Our small role library has no supported connections for your role focus and confirmed skills. This says nothing about your employability; many careers and skill descriptions are not covered.',
-    action: roles.length ? 'Explore these directions' : 'Compare a vacancy I choose', step: roles.length ? 3 : 4, roles,
+    action: roles.length ? 'Explore these directions' : 'Find vacancies for my role', step: roles.length ? 3 : 8, roles,
     limitation: limitation + ' Actual vacancies may have requirements or working conditions you haven’t checked yet.'
   };
 }

@@ -16,7 +16,10 @@ test('first plan gives different actionable experiments for each stated situatio
   assert.match(applications.detail, /specific example/);
   assert.match(applications.basis, /can’t tell/);
   assert.equal(applications.roles.length, 0);
+  assert.equal(clarity.step, 3);
+  assert.equal(applications.step, 4);
   state.profile.goal = 'offers';
+  assert.equal(firstPlan(state).step, 9);
   assert.match(firstPlan(state).detail, /saying it aloud/);
   assert.match(firstPlan(state).basis, /don’t yet have recorded outcomes/);
 });
@@ -26,7 +29,7 @@ test('unsupported and negative skill labels do not manufacture role matches or j
   const plan = firstPlan(state);
   assert.equal(plan.roles.length, 0);
   assert.match(plan.basis, /nothing about your employability/);
-  assert.equal(plan.step, 4);
+  assert.equal(plan.step, 8);
 });
 
 test('recorded outcomes replace the starter experiment, using valid dates and keeping uncertainty', () => {

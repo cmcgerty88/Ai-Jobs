@@ -23,7 +23,7 @@ for (const [goal, action] of [['clarity', 'Explore one of these role directions'
     page.on('pageerror', e => errors.push(e.message));
     await begin(page, goal);
     await expect(page.locator('.hero')).toBeHidden();
-    await expect(page.locator('#cv-file')).toBeHidden();
+    await expect(page.locator('#cv-file')).toBeVisible();
     await expect(page.locator('#goal')).toHaveValue(goal);
     await page.getByRole('button', { name: 'Show my next step' }).click();
     await expect(page.locator('#step-1')).toBeVisible();
@@ -35,8 +35,14 @@ for (const [goal, action] of [['clarity', 'Explore one of these role directions'
     expect(requests.every(r => r.url.startsWith('http://127.0.0.1:8771/') && r.method === 'GET' && !r.body)).toBeTruthy();
     expect(errors).toEqual([]);
     await page.locator('#first-plan-continue').click();
-    await expect(page.locator('#step-8')).toBeVisible();
-    await expect(page.locator('#vacancy-pool-status')).toContainText('not connected yet');
+    await expect(page.locator(`#step-${{ clarity: 3, interviews: 4, offers: 9 }[goal]}`)).toBeVisible();
+    if (goal === 'offers') {
+      await expect(page.locator('#practice-evidence')).toContainText('Prepared weekly reports');
+      await expect(page.locator('#starter-questions')).toContainText('What experience would you bring');
+    } else if (goal === 'interviews') {
+      await page.locator('#job-list').getByRole('button', { name: 'Find suggested vacancies' }).click();
+      await expect(page.locator('#step-8')).toBeVisible();
+    }
   });
 }
 
@@ -91,7 +97,7 @@ test('unsupported career still gets an action; mobile can change situation witho
   await page.setViewportSize({ width: 320, height: 740 });
   await begin(page); await experience(page, 'neurosurgery', 'Neurosurgeon');
   await expect(page.locator('#first-plan-basis')).toContainText('nothing about your employability');
-  await expect(page.locator('#first-plan-continue')).toHaveText('Find suggested vacancies');
+  await expect(page.locator('#first-plan-continue')).toHaveText('Find vacancies for my role');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.getByRole('button', { name: 'Edit my answers' }).click();
   await page.getByRole('button', { name: 'Change my situation' }).click();
