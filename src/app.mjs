@@ -52,6 +52,7 @@ preferencesForm.addEventListener('input', () => { syncProfile(); setSaveStatus()
 $('country').addEventListener('change', () => { $('currency').value = $('country').value === 'IE' ? 'EUR' : 'GBP'; syncProfile(); setSaveStatus(); });
 
 function showStep(step, focus = true) {
+  if (step !== 6) applicationPack?.clearImport();
   currentStep = step;
   document.querySelectorAll('.step-panel').forEach(section => { section.hidden = section.id !== `step-${step}`; });
   document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === ({ 2: 1, 3: 1, 6: 4, 10: 5 }[step] || step)) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
@@ -522,7 +523,7 @@ workspace = initWorkspace({
   }, announce
 });
 applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce,
-  prepareInterview: openInterview, trackJob, editJob: openJob
+  prepareInterview: openInterview, trackJob, editJob: openJob, getCvSource: () => $('cv-text').value
 });
 interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce,
   openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-practice').open = true; $('interview-title').focus(); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }

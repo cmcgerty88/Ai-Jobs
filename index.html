@@ -15,7 +15,7 @@
   <a href="#main" class="skip-link">Skip to main content</a>
   <div class="privacy-strip">Your CV stays in your browser. You choose whether to save your profile on this device.</div>
   <div class="shell">
-    <header class="site-header"><a class="brand" href="./" aria-label="RoleBridge home"><span class="brand-mark" aria-hidden="true">R</span>RoleBridge</a><div class="header-links"><span class="version">Private pilot · v0.9.0</span><button type="button" class="text-button" id="privacy-open">How your data is handled</button></div></header>
+    <header class="site-header"><a class="brand" href="./" aria-label="RoleBridge home"><span class="brand-mark" aria-hidden="true">R</span>RoleBridge</a><div class="header-links"><span class="version">Private pilot · v0.9.1</span><button type="button" class="text-button" id="privacy-open">How your data is handled</button></div></header>
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
@@ -163,6 +163,7 @@
         <div id="vacancy-suggestions" class="job-list"></div>
         <button type="button" id="vacancy-more" class="secondary" hidden>Show more suggestions</button>
         <p class="hint">Suggestions are keyword connections, not a fit score or prediction of an interview. The pool covers selected searches and may have no suitable listing for your role or location.</p>
+        <div class="form-bottom"><button type="button" id="vacancies-continue" data-step="4" class="primary">Continue to prepare application <span aria-hidden="true">→</span></button></div>
       </section>
       <section id="step-4" class="step-panel" aria-labelledby="vacancies-title" hidden>
         <div class="section-heading"><div><p class="eyebrow">Step 3 · Prepare your application</p><h2 id="vacancies-title" tabindex="-1">Choose a saved job to prepare</h2><p class="muted">Open a job to review the match and prepare a tailored CV. Your interview preparation stays with the same job.</p></div><div class="button-row"><button type="button" data-step="8" class="secondary">Find suggested vacancies</button><button type="button" class="secondary" id="add-job">Add a vacancy</button></div></div>
@@ -226,9 +227,24 @@
         <div id="pack-editor" hidden>
           <div id="pack-stale" class="notice" hidden><strong>Your profile or this vacancy has changed.</strong><p>Your edited draft and practice notes have been kept. Review the CV and interview focus against the latest information. Use Refresh draft from profile or Update practice questions when you want to replace them.</p></div>
           <div class="notice soft"><strong>Readable by applicant tracking systems; no guaranteed pass.</strong><p>The downloads use one column, standard headings and selectable text. They avoid photos, tables and text boxes. Follow the employer’s requested file format and check the fields after uploading. Keywords alone do not establish eligibility.</p></div>
+          <section class="card application-cv-import" aria-labelledby="application-cv-title">
+            <h3 id="application-cv-title">Fill your application from your CV</h3>
+            <p class="small muted">Import career history, education, training and relevant CV text, then review what to use. You can edit every field or enter everything manually.</p>
+            <label for="application-cv-file">Upload your CV <span class="optional">PDF, DOCX or TXT · up to 5 MB</span></label><input id="application-cv-file" type="file" accept=".pdf,.docx,.txt">
+            <div class="button-row"><button type="button" id="application-cv-reuse" class="secondary">Use CV already uploaded in this tab</button><button type="button" id="application-cv-manual" class="text-button">Enter details manually</button></div>
+            <p id="application-cv-status" role="status" class="small"></p>
+            <div id="application-cv-review" hidden>
+              <p class="hint">Tick only the fields you want to use. Contact details and existing fields are not selected automatically. Check names, dates and accuracy; remove sensitive or irrelevant details. Career details are shared across all CV drafts. No dates, qualifications or achievements are invented.</p>
+              <div id="application-cv-fields"></div>
+              <label class="check"><input id="application-cv-confirmed" type="checkbox"><span>I have reviewed the selected details and want to use them. If encrypted saving is enabled, save these reviewed fields.</span></label>
+              <p id="application-cv-error" class="error-text" role="alert"></p>
+              <div class="button-row"><button type="button" id="application-cv-apply" class="primary">Use selected CV details</button><button type="button" id="application-cv-discard" class="text-button">Discard import</button></div>
+            </div>
+            <p class="hint">Read locally in your browser. The original file is never uploaded or saved. Unapplied imports are discarded when you leave this page or change jobs. Some layouts need manual corrections.</p>
+          </section>
           <div class="pack-layout">
             <div>
-              <form id="cv-base-form" class="card" autocomplete="off" novalidate><h3>1. Your career details</h3><p class="hint">Only include details you want an employer to receive. These reviewed fields save with your encrypted workspace. Raw CV text is never copied automatically.</p>
+              <form id="cv-base-form" class="card" autocomplete="off" novalidate><h3>1. Your career details</h3><p class="hint">Only include details you want an employer to receive. These reviewed fields save with your encrypted workspace. You can import reviewed sections above or enter details below. Raw CV files are never saved.</p>
                 <label class="check"><input id="cv-anonymous" name="anonymous" type="checkbox"><span>Create an anonymised CV (omit name and contact details from downloads).</span></label>
                 <label for="cv-fullName">Name to show on your CV</label><input id="cv-fullName" name="fullName" maxlength="120" autocomplete="off">
                 <div class="field-grid"><div><label for="cv-email">Email <span class="optional">or phone</span></label><input id="cv-email" name="email" type="email" maxlength="200" autocomplete="off"></div><div><label for="cv-phone">Phone <span class="optional">or email</span></label><input id="cv-phone" name="phone" type="tel" maxlength="80" autocomplete="off"></div></div>

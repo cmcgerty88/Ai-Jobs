@@ -1,3 +1,4 @@
+import { initApplicationCvImport } from './cv-application-ui.mjs';
 import { cleanCv, cleanPack } from './application-data.mjs';
 import { createPack, sourceKey, cvIssues, cvBlocks, interviewBlocks, keywordReview, plainText } from './application-content.mjs';
 import { interviewQuestions } from './interviews.mjs';
@@ -8,12 +9,22 @@ import { assessJob } from './matching.mjs';
 import { makePdf, makeDocx, downloadDocument } from './document-export.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
-export function initApplicationPack({ getState, changed, announce, prepareInterview, trackJob, editJob }) {
+export function initApplicationPack({ getState, changed, announce, prepareInterview, trackJob, editJob, getCvSource }) {
   let selectedId = '', generation = 0;
   const baseForm = $('cv-base-form'), draftForm = $('cv-draft-form');
   baseForm.reset(); draftForm.reset(); $('cv-reviewed').checked = false; $('interview-focus').value = '';
   const getJob = () => getState().jobs.find(j => j.id === selectedId);
   const getPack = () => getState().packs.find(p => p.jobId === selectedId);
+  const cvImport = initApplicationCvImport({ getState, getPack, getSource: getCvSource,
+    apply: values => {
+      const state = getState(), pack = getPack(); if (!pack) return;
+      state.cv = cleanCv({ ...state.cv, ...values.cv });
+      Object.assign(pack, cleanPack({ ...pack, ...values.pack }));
+      for (const [field, value] of Object.entries(values.cv)) baseForm.elements.namedItem(field).value = value;
+      for (const [field, value] of Object.entries(values.pack)) draftForm.elements.namedItem(field).value = value;
+      invalidateReview(); changed(); renderPreview();
+    }
+  });
   $('pack-track').addEventListener('click', () => trackJob(selectedId));
   $('interview-context-open').addEventListener('click', () => prepareInterview(selectedId));
   const option = (value, label) => { const el = node('option', label); el.value = value; return el; };
@@ -52,6 +63,7 @@ export function initApplicationPack({ getState, changed, announce, prepareInterv
     });
   }
   async function render(jobId) {
+    cvImport.clear();
     const state = getState(), token = ++generation;
     selectedId = state.jobs.some(j => j.id === jobId) ? jobId : state.jobs.some(j => j.id === selectedId) ? selectedId : state.jobs[0]?.id || '';
     $('pack-job').replaceChildren(...state.jobs.map(j => option(j.id, `${j.title} — ${j.employer}`)));
@@ -74,7 +86,7 @@ export function initApplicationPack({ getState, changed, announce, prepareInterv
     }
     $('pack-empty').hidden = Boolean(job); $('pack-create').hidden = Boolean(pack); $('pack-create').disabled = !job;
     $('pack-delete').hidden = !pack; $('pack-editor').hidden = !pack; $('pack-stale').hidden = true;
-    $('pack-status').textContent = pack ? 'This draft belongs to the selected vacancy. Review and edit it before use.' : job ? 'Create a draft from the profile you confirmed, then add your career details.' : '';
+    $('pack-status').textContent = pack ? 'This draft belongs to the selected vacancy. Review and edit it before use.' : job ? 'Create a draft from the profile you confirmed, then import your CV or enter career details manually.' : '';
     if (job?.source?.summaryOnly) $('pack-status').textContent += ' This vacancy was imported from a short Reed summary. Check the full advert and update any missing requirements before relying on this pack.';
     $('cv-export-status').textContent = ''; $('interview-export-status').textContent = ''; invalidateReview();
     if (!pack) { $('cv-preview').replaceChildren(); $('interview-questions').replaceChildren(); baseForm.reset(); draftForm.reset(); return; }
@@ -157,5 +169,5 @@ export function initApplicationPack({ getState, changed, announce, prepareInterv
     finally { exports.forEach(id => { $(id).disabled = false; }); }
   }
   for (const id of exports) { const [, kind, format] = id.split('-'); $(id).addEventListener('click', () => exportFile(kind, format)); }
-  return { render };
+  return { render, clearImport: cvImport.clear };
 }
