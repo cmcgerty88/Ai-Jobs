@@ -1,3 +1,4 @@
+import { sampleAnswer } from './interview-answers.mjs';
 import { normalise, hasPhrase, findSkillMentions } from './model.mjs';
 import { cleanPack } from './application-data.mjs';
 import { ROLE_CATALOGUE } from './roles.mjs';
@@ -65,14 +66,18 @@ export function interviewBlocks(job, pack) {
   const result = [block('Interview preparation', 'title'), block(job.title, 'subtitle'), block(job.employer),
     block(`Practice focus: ${role?.title || 'General role preparation'}`),
     block('These are typical practice questions, not questions supplied or guaranteed by the employer. Confirm the role focus against the advert. Use only truthful examples.'),
+    block('Your 20-minute preparation plan', 'heading'), block('5 minutes: read the three advert priorities and choose your strongest examples. 10 minutes: practise your introduction and two answers aloud. 5 minutes: choose questions to ask and check the interview arrangements.'),
+    block('How to use the sample answers', 'heading'), block('Examples below show structure and reasoning. Fictional examples are not your career history. Answer starters contain brackets for facts only you can supply. Keep your own notes separate and use only claims you can support.'),
     block('How to practise', 'heading'), block('Use Situation, Task, Action and Result (STAR). Keep most of the answer on what you personally did. State only results you can support. If experience is missing, explain the gap and how you would learn.'),
-    ...contextBlocks(pack), ...preparationEvidenceBlocks(pack), block('Your questions and notes', 'heading')];
+    { ...block('1. Know the role and your evidence', 'heading'), pageBreak: true }, ...preparationEvidenceBlocks(pack), ...contextBlocks(pack), { ...block('2. Practise your answers', 'heading'), pageBreak: true }];
   interviewQuestions(job, pack).forEach((q, index) => {
-    result.push(block(`${index + 1}. ${q.question}`, 'heading'), block(q.guidance));
+    const sample = sampleAnswer(q, job, pack);
+    result.push(block(`${index + 1}. ${q.question}`, 'heading'), block('What to cover: ' + q.guidance), block(sample.label, 'subtitle'), block(sample.text), block(sample.adapt));
     const answer = pack.answers.find(a => a.id === q.id)?.answer.trim();
     result.push(block(answer ? `Your practice notes:\n${answer}` : 'Your practice notes — use only facts you can support.\nSituation / Task: __________________________________________\nMy actions: ______________________________________________\nResult / learning: _________________________________________'));
   });
-  result.push(block('Before the interview', 'heading'), block('Check the format and time, research the employer using reliable sources, review the advert and your submitted CV, and choose two questions to ask. You can ask about interview adjustments without adding medical information to this pack.'));
+  result.push({ ...block('3. Final checks', 'heading'), pageBreak: true }, block('Check the format and time, research the employer using reliable sources, review the advert and your submitted CV, and choose two questions to ask. You can ask about interview adjustments without adding medical information to this pack.'));
+  result.push(block('If redundancy comes up', 'heading'), block('A concise, factual answer is enough: “My role ended through redundancy. I am now looking for [the work you want next], where I can contribute [relevant strength].” Use this only if it reflects your situation; you do not need to share private financial or personal details.'), block('After the conversation', 'heading'), block('Write down the topics covered, what you want to improve and the agreed next steps. Record the outcome in My job search. Follow up according to the timeline the employer gave you.'));
   return result;
 }
 export function plainText(blocks) { return blocks.map(b => b.text).filter(Boolean).join('\n\n') + '\n'; }

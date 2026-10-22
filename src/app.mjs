@@ -1,5 +1,4 @@
 import { initInterviewPrep } from './interview-prep-ui.mjs';
-import { initApplicationPack } from './application-ui.mjs';
 import { searchNextAction, upcomingInterviews } from './search-journey.mjs';
 import { cvProfileDraft } from './cv-profile.mjs';
 import { initVacancies } from './vacancy-ui.mjs';
@@ -16,8 +15,8 @@ const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
 let profileReviewed = false, entryStep = 0;
-let currentStep = 1, fileGeneration = 0, pendingRemoval = null, jobReturnStep = 4;
-let workspace, applicationPack, vacancies, interviewPrep;
+let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
+let workspace, vacancies, interviewPrep;
 // Original field values remain the saved version until the person reviews the import.
 const pendingCvFields = new Map();
 const profileForm = $('profile-form'), preferencesForm = $('preferences-form'), jobForm = $('job-form');
@@ -52,28 +51,27 @@ preferencesForm.addEventListener('input', () => { syncProfile(); setSaveStatus()
 $('country').addEventListener('change', () => { $('currency').value = $('country').value === 'IE' ? 'EUR' : 'GBP'; syncProfile(); setSaveStatus(); });
 
 function showStep(step, focus = true) {
-  if (step !== 6) applicationPack?.clearImport();
+  if (step !== 10) interviewPrep?.leave();
   currentStep = step;
   document.querySelectorAll('.step-panel').forEach(section => { section.hidden = section.id !== `step-${step}`; });
-  document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === ({ 2: 1, 3: 1, 6: 4, 10: 5 }[step] || step)) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
+  document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === ({ 2: 1, 3: 1, 4: 8 }[step] || step)) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
   if (step === 3) renderDirections();
   if (step === 4) renderResults();
   if (step === 5) renderDashboard();
   if (step === 10) interviewPrep.open();
   if (step === 8) vacancies.open();
-  if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
   $('tool-menu').open = false;
   document.querySelector('.journey-nav').hidden = step === 0;
   if (focus) {
-    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 8: 'vacancy-pool-title', 10: 'prep-title' }[step]);
+    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 8: 'vacancy-pool-title', 10: 'prep-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
 function navigate(step) {
   syncProfile();
   const validProfile = [...profileForm.elements].every(input => input.id === 'profile-confirmed' && profileReviewed || input.checkValidity());
-  if ([4, 6, 8].includes(step) && !validProfile) { showStep(1); profileForm.reportValidity(); return; }
-  if ([3, 4, 6].includes(step) && !preferencesForm.checkValidity()) { showStep(2); preferencesForm.reportValidity(); return; }
+  if ([4, 8].includes(step) && !validProfile) { showStep(1); profileForm.reportValidity(); return; }
+  if ([3, 4].includes(step) && !preferencesForm.checkValidity()) { showStep(2); preferencesForm.reportValidity(); return; }
   showStep(step);
 }
 document.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => navigate(Number(button.dataset.step))));
@@ -321,7 +319,6 @@ $('cv-file').addEventListener('change', async () => {
 
 function openJob(existing) {
   if (state.jobs.length >= 30 && !existing) { announce('This first version supports 30 vacancies. Remove an old vacancy before adding another.'); return; }
-  jobReturnStep = currentStep === 6 ? 6 : 4;
   $('job-extra-facts').open = Boolean(existing);
   jobForm.reset(); $('job-error').textContent = '';
   $('job-dialog-title').textContent = existing ? 'Edit your vacancy' : 'Add a vacancy';
@@ -343,7 +340,7 @@ jobForm.addEventListener('submit', event => {
   const existing = state.jobs.find(job => job.id === data.id);
   const job = cleanJob({ ...data, source: existing?.source, progress: existing?.progress, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
   if (existing) state.jobs[state.jobs.indexOf(existing)] = job; else state.jobs.push(job);
-  $('job-dialog').close(); if (jobReturnStep === 6) openApplication(job.id); else showStep(4); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
+  $('job-dialog').close(); showStep(4); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
 });
 
 function listSection(details, title, values) {
@@ -387,7 +384,7 @@ function renderResults() {
     if (job.location) meta.append(node('span', job.location));
     if (job.mode !== 'unknown') meta.append(node('span', { remote: 'Remote', hybrid: 'Hybrid', onsite: 'On-site' }[job.mode]));
     card.append(meta);
-    if (job.source?.summaryOnly) card.append(node('p', 'Imported from a Reed summary. Read the full advert and check missing facts before using this for a CV or interview pack. The feed retrieval is not your own check that the vacancy is open.', 'hint'));
+    if (job.source?.summaryOnly) card.append(node('p', 'Imported from a Reed summary. Read the full advert and check missing facts before using this for interview preparation. The feed retrieval is not your own check that the vacancy is open.', 'hint'));
     card.append(node('p', result.failures[0] || result.questions[0] || 'The entered requirements fit, and you confirmed the essentials. This is worth reviewing; it is not a prediction of an interview.', 'job-reason'));
     const details = node('details', undefined, 'job-details'); details.append(node('summary', 'See the reasons and missing information'));
     listSection(details, 'Conflicts with your requirements', result.failures);
@@ -400,7 +397,7 @@ function renderResults() {
     details.append(node('p', job.status === 'open' && Number.isFinite(checkedAt) ? `You marked the original page open on ${new Date(checkedAt).toLocaleString()}. This is not an independent check or proof of hiring intent.` : job.status === 'closed' ? 'You marked this vacancy as closed.' : 'The current vacancy status has not been checked.', 'hint'));
     const next = node('p', undefined, 'next-action'); next.append(node('strong', 'Next step'), document.createTextNode(result.nextAction)); details.append(next);
     const actions = node('div', undefined, 'job-actions');
-    const prepare = node('button', 'Prepare my application', 'primary'); prepare.type = 'button'; prepare.addEventListener('click', () => { openApplication(job.id); }); actions.append(prepare);
+    const prepare = node('button', 'Prepare for interview', 'primary'); prepare.type = 'button'; prepare.addEventListener('click', () => { openInterview(job.id); }); actions.append(prepare);
     if (job.url) { const link = node('a', 'Open original vacancy'); link.href = job.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link); }
     const edit = node('button', 'Edit', 'text-button'); edit.type = 'button'; edit.setAttribute('aria-label', `Edit ${job.title}`); edit.addEventListener('click', () => openJob(job));
     const remove = node('button', 'Remove', 'text-button danger'); remove.type = 'button'; remove.setAttribute('aria-label', `Remove ${job.title}`);
@@ -420,10 +417,6 @@ function renderPlan() {
 }
 $('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); state.packs = state.packs.filter(pack => pack.jobId !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
 
-function openApplication(jobId) {
-  navigate(6);
-  if (currentStep === 6) applicationPack.render(jobId).catch(() => announce('Please try opening this application again.'));
-}
 function openInterview(jobId) { showStep(10); interviewPrep.open(jobId); }
 function trackJob(jobId) {
   showStep(5);
@@ -436,7 +429,7 @@ function renderDashboard() {
   const next = searchNextAction(state);
   $('search-next-title').textContent = next.title; $('search-next-detail').textContent = next.detail;
   $('search-next-action').textContent = next.action;
-  $('search-next-action').onclick = () => next.step === 6 ? openApplication(next.jobId) : next.step === 10 ? openInterview(next.jobId) : next.jobId ? trackJob(next.jobId) : navigate(next.step);
+  $('search-next-action').onclick = () => next.step === 10 ? openInterview(next.jobId) : next.jobId ? trackJob(next.jobId) : navigate(next.step);
   $('search-observation').hidden = report.applications < 3;
   const upcoming = upcomingInterviews(state);
   $('upcoming-interviews').hidden = !upcoming.length; $('upcoming-list').replaceChildren();
@@ -459,7 +452,7 @@ function renderDashboard() {
     const p = cleanProgress(job.progress), card = node('article', undefined, 'card'); card.dataset.jobId = job.id;
     card.append(node('h3', job.title), node('p', job.employer, 'small muted'), node('p', STAGES[p.stage] + (p.appliedAt ? ` · Applied ${p.appliedAt}` : ''), 'small'));
     const actions = node('div', undefined, 'button-row');
-    const prepare = node('button', 'Review application & CV', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => openApplication(job.id));
+    const prepare = node('button', 'Review job match', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => navigate(4));
     const interview = node('button', 'Prepare for interview', 'secondary'); interview.type = 'button'; interview.addEventListener('click', () => openInterview(job.id));
     actions.append(prepare, interview); card.append(actions);
     if (p.scheduledAt) card.append(node('p', `Scheduled interview: ${p.scheduledAt}`, 'small'));
@@ -522,14 +515,9 @@ workspace = initWorkspace({
     showStep(entryStep === 10 ? 10 : restored && (complete || state.jobs.length) ? 5 : restored ? 1 : 0); entryStep = 0;
   }, announce
 });
-applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce,
-  prepareInterview: openInterview, trackJob, editJob: openJob, getCvSource: () => $('cv-text').value
-});
-interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce,
-  openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-practice').open = true; $('interview-title').focus(); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }
-});
+interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce });
 vacancies = initVacancies({
-  getState: () => state, navigate, prepareJob: openApplication,
+  getState: () => state, navigate, prepareJob: openInterview,
   updateSearch: (target, location) => { $('targetRole').value = target; $('locations').value = location; syncProfile(); setSaveStatus(); },
   addJob: vacancy => {
     if (state.jobs.some(job => job.id === vacancy.id || job.url === vacancy.url)) return 'This vacancy is already in your shortlist.';

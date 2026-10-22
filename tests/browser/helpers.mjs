@@ -4,11 +4,9 @@ export async function expand(page, selector) {
   if (selector === '#cv-reader') await expand(page, '#cv-tools');
 }
 export async function tool(page, step) {
-  if (step === 6) {
-    if (await page.locator('#step-6').isVisible()) return;
-    await tool(page, 4);
-    await page.locator('#job-list').getByRole('button', { name: 'Prepare my application', exact: true }).first().click();
-  } else if ([1, 4, 5, 8].includes(step)) {
+  if (step === 4) {
+    await tool(page, 8); await page.locator('#step-8 [data-step="4"]').click();
+  } else if ([1, 5, 8, 10].includes(step)) {
     await page.locator(`.journey-nav [data-step="${step}"]`).click();
   } else {
     await expand(page, '#tool-menu');

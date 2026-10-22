@@ -17,7 +17,7 @@ async function filter(page, target, location = '') {
   await page.getByRole('button', { name: 'Find suggestions', exact: true }).click();
 }
 
-test('suggestions use target role, confirmed skills and Belfast location locally; one click imports safely through to a CV pack', async ({ page }) => {
+test('suggestions use target role, confirmed skills and Belfast location locally; one click imports safely through to interview preparation', async ({ page }) => {
   const requests = [], errors = [];
   page.on('request', r => requests.push({ url: r.url(), method: r.method(), body: r.postData() })); page.on('pageerror', e => errors.push(e.message));
   await page.route('**/data/vacancies.json', route => route.fulfill({ json: sample() }));
@@ -38,13 +38,10 @@ test('suggestions use target role, confirmed skills and Belfast location locally
   await expect(page.locator('#job-min')).toHaveValue(''); await expect(page.locator('#job-description')).toHaveValue(/customer service/i);
   await page.getByRole('button', { name: 'Save and compare' }).click();
   await expect(page.locator('#job-list')).toContainText('Imported from a Reed summary');
-  await page.getByRole('button', { name: 'Prepare my application', exact: true }).click();
-  await expect(page.locator('#pack-status')).toContainText('short Reed summary');
-  await page.locator('#pack-create').click(); await expect(page.locator('#pack-editor')).toBeVisible();
-  await page.locator('#cv-anonymous').check(); await page.locator('#cv-history').fill('Synthetic coordinator | 2023–2026\nPrepared weekly reports.');
-  await page.locator('#cv-reviewed').check();
-  const download = page.waitForEvent('download'); await page.locator('#download-cv-docx').click();
-  expect((await download).suggestedFilename()).toBe('rolebridge-cv-operations-manager.docx');
+  await page.getByRole('button', { name: 'Prepare for interview', exact: true }).click();
+  await expect(page.locator('#prep-job-status')).toContainText('short Reed summary');
+  await expect(page.locator('#prep-description')).toBeEditable();
+  await expect(page.locator('#prep-job-title')).toHaveValue('Operations manager');
   expect(requests.every(r => r.url.startsWith('http://127.0.0.1:8771/') && r.method === 'GET' && !r.body)).toBeTruthy();
   const feedRequests = requests.filter(r => r.url.includes('vacancies.json'));
   expect(feedRequests.length).toBe(1); expect(feedRequests[0].url).toBe('http://127.0.0.1:8771/data/vacancies.json');
@@ -121,7 +118,7 @@ test('empty matches explain location exclusions and allow temporary browsing wit
   await expect(page.locator('#targetRole')).toHaveValue('Neurosurgeon');
   await tool(page, 2); await expect(page.locator('#locations')).toHaveValue('Northern Ireland');
   await tool(page, 4); await expect(page.locator('#job-list .job-card')).toHaveCount(1);
-  expect(requests.filter(url => url.includes('vacancies.json'))).toEqual(['http://127.0.0.1:8771/data/vacancies.json']);
+  expect(requests.filter(url => url.includes('vacancies.json'))).toEqual(Array(2).fill('http://127.0.0.1:8771/data/vacancies.json'));
   expect(requests.every(url => url.startsWith('http://127.0.0.1:8771/'))).toBeTruthy();
 });
 

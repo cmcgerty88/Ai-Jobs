@@ -48,57 +48,6 @@ test('switching focus preserves reviewed experience and takes an existing profil
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
-test('one job stays connected from application PDF through tracking, interview prep and encrypted restore', async ({ page }) => {
-  const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await begin(page, 'interviews'); await experience(page);
-  await page.locator('#add-job').click(); await page.locator('#job-title').fill('Release Manager');
-  await page.locator('#job-employer').fill('Synthetic employer');
-  await page.locator('#job-description').fill('Coordinate production releases using Jira. Manage release readiness and rollback plans.');
-  await page.getByRole('button', { name: 'Save and compare' }).click();
-  await page.getByRole('button', { name: 'Prepare my application', exact: true }).click();
-  await expect(page.locator('#pack-match')).toContainText('Release Manager — Synthetic employer');
-  await expect(page.locator('#pack-match')).toContainText('Jira');
-  await page.locator('#pack-create').click();
-  await expect(page.locator('#interview-questions')).toBeHidden();
-  await page.locator('#cv-anonymous').check();
-  await page.locator('#cv-history').fill('Release Manager | Synthetic previous employer | 2023–2026\nCoordinated releases and checked readiness.');
-  await page.locator('#cv-reviewed').check();
-  const download = page.waitForEvent('download'); await page.locator('#download-cv-pdf').click();
-  expect((await download).suggestedFilename()).toBe('rolebridge-cv-release-manager.pdf');
-  await page.locator('#pack-track').click();
-  await expect(page.locator('#dashboard-title')).toHaveText('My job search');
-  await expect(page.locator('.tracker-form')).toBeVisible();
-  const today = new Date().toISOString().slice(0, 10), future = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
-  await page.locator('.tracker-form [name=scheduledAt]').fill(future);
-  await page.getByRole('button', { name: 'Update outcome' }).click();
-  await expect(page.locator('.tracker-form [role=alert]')).toContainText('application date');
-  await page.locator('.tracker-form [name=stage]').selectOption('applied');
-  await page.locator('.tracker-form [name=appliedAt]').fill(today);
-  await page.getByRole('button', { name: 'Update outcome' }).click();
-  await expect(page.locator('#search-next-title')).toContainText('Prepare for your Release Manager interview');
-  await expect(page.locator('#upcoming-interviews')).toContainText(future);
-  await expect(page.locator('#search-observation')).toBeHidden();
-  await expect(page.locator('#dashboard-stats .stat').nth(1)).toContainText('0');
-  await page.locator('#search-next-action').click();
-  await expect(page.locator('#prep-job-title')).toHaveValue('Release Manager');
-  await expect(page.locator('#prep-description')).toHaveValue(/Manage release readiness/);
-  await page.locator('#prep-context-status').selectOption('provided');
-  await page.locator('#prep-process').fill('Panel with the hiring manager; discuss release readiness and rollback.');
-  await page.locator('#prep-reviewed').check(); await page.locator('#prep-create').click();
-  const pdf = page.waitForEvent('download'); await page.locator('#prep-download-cheat').click();
-  expect((await pdf).suggestedFilename()).toContain('interview-cheat-sheet');
-  await page.locator('#save-open').click();
-  const password = 'Synthetic-private-password!';
-  await page.locator('#save-password').fill(password); await page.locator('#save-password-confirm').fill(password);
-  await page.locator('#save-consent').check(); await page.locator('#save-confirm').click();
-  await expect(page.locator('#save-dialog')).toBeHidden();
-  const raw = await page.evaluate(k => localStorage.getItem(k), key); expect(raw).not.toContain('Synthetic employer');
-  await page.reload(); await page.locator('#password').fill(password); await page.locator('#create-workspace').click();
-  await expect(page.locator('#step-5')).toBeVisible(); await expect(page.locator('#upcoming-interviews')).toContainText(future);
-  await page.locator('#search-next-action').click(); await expect(page.locator('#prep-process')).toHaveValue(/Panel with the hiring manager/);
-  expect(errors).toEqual([]);
-});
-
 test('quick start protects older saved data and works with browser storage unavailable', async ({ page, context }) => {
   await page.goto('/');
   const legacyKey = 'rolebridge.private-profile.v1';
@@ -139,8 +88,6 @@ test('outcome observations appear only after three valid applications; job actio
   }
   await expect(page.locator('#search-observation')).toBeVisible();
   await expand(page, '#search-observation'); await expect(page.locator('#diagnosis-caveat')).toContainText('not enough evidence');
-  await cards.nth(1).getByRole('button', { name: 'Review application & CV' }).click();
-  await expect(page.locator('#pack-match')).toContainText('Change Manager');
-  await page.getByRole('button', { name: 'Already have an interview for this job?' }).click();
+  await cards.nth(1).getByRole('button', { name: 'Prepare for interview' }).click();
   await expect(page.locator('#prep-job-title')).toHaveValue('Change Manager');
 });

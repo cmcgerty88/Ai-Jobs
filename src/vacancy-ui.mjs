@@ -89,10 +89,10 @@ export function initVacancies({ getState, updateSearch, addJob, navigate, prepar
       const message = node('p', '', 'small'); message.setAttribute('role', 'status');
       add.addEventListener('click', () => {
         const result = addJob(job);
-        if (result === true) { add.textContent = 'In my shortlist'; add.disabled = true; message.textContent = 'Added. Choose Prepare this application to review the match and build your CV.'; }
+        if (result === true) { add.textContent = 'In my shortlist'; add.disabled = true; message.textContent = 'Added. Choose Prepare for interview to create a pack using this job description and your experience.'; }
         else message.textContent = result;
       });
-      const prepare = node('button', 'Prepare this application', 'primary'); prepare.type = 'button'; prepare.hidden = !exists;
+      const prepare = node('button', 'Prepare for interview', 'primary'); prepare.type = 'button'; prepare.hidden = !exists;
       prepare.addEventListener('click', () => prepareJob(job.id));
       add.addEventListener('click', () => { prepare.hidden = !add.disabled; });
       actions.append(add, prepare); card.append(actions, message); list.append(card);

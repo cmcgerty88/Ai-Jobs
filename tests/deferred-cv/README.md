@@ -1,0 +1,1 @@
+Tailored CV creation is deferred as of v0.10.0. These historical browser scenarios are outside the active Playwright testDir because their UI has been removed. Restore and update them alongside the feature if it returns. Data formats and local document generation still have active unit coverage. Existing saved CV drafts remain in encrypted backups until explicitly deleted.

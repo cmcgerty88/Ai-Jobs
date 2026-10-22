@@ -69,3 +69,26 @@ export function cheatSheetBlocks(job, pack) {
     block('Ask: What are the first 90-day priorities? How will success be measured?', 'body', 2),
     block('Typical prompts, not employer questions. Excerpts may be shortened; use the full pack for context.', 'body', 2)];
 }
+
+// Two independently budgeted A4 sheets in one PDF: preparation, then the day itself.
+export function preInterviewSheetBlocks(job, pack) {
+  const source = interviewEvidence(pack), context = cleanInterviewContext(pack.interviewContext);
+  return [block('Pre-interview checklist', 'title', 1), block(`${job.title}${job.employer ? ' · ' + job.employer : ''}`, 'subtitle', 2),
+    block('1. Know the role', 'heading', 1), ...lines(pack.focus).slice(0, 3).map(text => block('Check: ' + text, 'body', 2)),
+    block('2. Prepare three truthful examples', 'heading', 1), ...lines(source.evidence).slice(0, 3).map((text, i) => block(`${i + 1}. ${text}`, 'body', 2)),
+    block('For each: explain the situation, your task, your actions and a result you can support. Identify gaps honestly.', 'body', 2),
+    block('3. Research and confirm', 'heading', 1),
+    block(context.company ? 'My company notes: ' + context.company : 'Check the company website, team priorities and why the role exists. Prepare one informed question.', 'body', 3),
+    block(context.process ? 'My process notes: ' + context.process : 'Confirm the time, time zone, format, panel roles and any requested task or presentation.', 'body', 3),
+    block('4. Rehearse and get ready', 'heading', 1),
+    block('Practise a 60–90 second introduction and two STAR answers aloud. Replace all sample-answer brackets with your own facts.', 'body', 2),
+    block('Check travel or meeting technology, plan what you need, and arrange any interview adjustments directly with the employer.', 'body', 2),
+    block('Choose two questions: first 90-day priorities; how success is measured; team support or current challenges.', 'body', 2),
+    block('Supplied notes are not independently verified. Long excerpts are shortened; use the full pack for context.', 'body', 2)];
+}
+export function interviewDaySheetBlocks(job, pack) {
+  const blocks = cheatSheetBlocks(job, pack);
+  blocks[0].text = 'Interview-day cheat sheet';
+  blocks.splice(-1, 0, block('In the room: pause, clarify the question, give your example, then stop. If unsure, explain how you would find out.', 'body', 2));
+  return blocks;
+}
