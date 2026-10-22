@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expand, privacyControl } from './helpers.mjs';
+import { expand, privacyControl, tool } from './helpers.mjs';
 const cv = `PRIVATE_RAW_MARKER private@example.test
 Work experience
 Release Manager | Example Employer | Jan 2023 - Present
@@ -21,7 +21,7 @@ async function readSaved(page) {
 
 test('CV first journey needs only review; later uploads preserve edits and target choice', async ({ page }) => {
   const requests = []; page.on('request', request => requests.push(request));
-  await page.goto('/'); await page.locator('#diagnosis-start').click(); await page.locator('[data-goal="offers"]').click();
+  await page.goto('/'); await page.locator('#diagnosis-start').click(); await page.locator('[data-goal="clarity"]').click();
   await expect(page.locator('#cv-file')).toBeVisible();
   await expect(page.locator('#cv-text')).toBeHidden();
   await upload(page);
@@ -33,10 +33,9 @@ test('CV first journey needs only review; later uploads preserve edits and targe
   await page.locator('#profile-form button[type="submit"]').click();
   await expect(page.locator('#step-1')).toBeVisible();
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
-  await page.locator('#first-plan-continue').click();
-  await expect(page.locator('#step-9')).toBeVisible();
-  await expect(page.locator('#starter-questions')).toContainText('whether a release is ready');
-  await page.getByRole('button', { name: 'Back to my next step' }).click(); await page.getByRole('button', { name: 'Edit my answers' }).click();
+  await expect(page.locator('#step-8')).toBeVisible();
+  await expect(page.locator('#vacancy-target')).toHaveValue('Release Manager');
+  await tool(page, 1);
   await page.locator('#currentRole').fill('My reviewed title');
   await page.locator('#targetRole').fill('My chosen next role');
   await page.locator('#skills').fill('My demonstrable skill');

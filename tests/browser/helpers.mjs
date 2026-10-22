@@ -4,8 +4,16 @@ export async function expand(page, selector) {
   if (selector === '#cv-reader') await expand(page, '#cv-tools');
 }
 export async function tool(page, step) {
-  await expand(page, '#tool-menu');
-  await page.locator(`.steps [data-step="${step}"]`).click();
+  if (step === 6) {
+    if (await page.locator('#step-6').isVisible()) return;
+    await tool(page, 4);
+    await page.locator('#job-list').getByRole('button', { name: 'Prepare my application', exact: true }).first().click();
+  } else if ([1, 4, 5, 8].includes(step)) {
+    await page.locator(`.journey-nav [data-step="${step}"]`).click();
+  } else {
+    await expand(page, '#tool-menu');
+    await page.locator(`.steps [data-step="${step}"]`).click();
+  }
 }
 export async function chooseSituation(page) {
   if (await page.locator('#step-0').isVisible()) await page.locator('[data-goal="clarity"]').click();

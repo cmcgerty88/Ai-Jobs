@@ -1,8 +1,7 @@
 import { initInterviewPrep } from './interview-prep-ui.mjs';
 import { initApplicationPack } from './application-ui.mjs';
-import { firstPlan } from './first-plan.mjs';
+import { searchNextAction, upcomingInterviews } from './search-journey.mjs';
 import { cvProfileDraft } from './cv-profile.mjs';
-import { interviewQuestions } from './interviews.mjs';
 import { initVacancies } from './vacancy-ui.mjs';
 import { skillEvidence, canonicalSkill } from './skills.mjs';
 import { extractWorkExamples, mergeWorkExamples } from './work-examples.mjs';
@@ -16,7 +15,8 @@ import { ROLE_CATALOGUE, exploreRoles, matchRole, roleById, prepareSearchTerms }
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 let state = blankState();
-let currentStep = 1, fileGeneration = 0, pendingRemoval = null;
+let profileReviewed = false, entryStep = 0;
+let currentStep = 1, fileGeneration = 0, pendingRemoval = null, jobReturnStep = 4;
 let workspace, applicationPack, vacancies, interviewPrep;
 // Original field values remain the saved version until the person reviews the import.
 const pendingCvFields = new Map();
@@ -32,9 +32,9 @@ function fillProfile() {
   updateProfilePrompt();
 }
 function updateProfilePrompt() {
-  const goal = $('goal').value;
-  $('profile-prompt').textContent = goal === 'offers' ? 'Start with an example you could talk about' : goal === 'clarity' ? 'Find a direction to explore' : 'Start with evidence for your applications';
-  $('profile-context').textContent = goal === 'offers' ? 'Briefly describe something you did and its outcome. We’ll suggest how to practise it for an interview.' : goal === 'clarity' ? 'Add skills you can demonstrate so we can connect them to role directions.' : 'Describe one piece of work you can support with facts. We’ll suggest how to check it against a real advert.';
+  $('profile-prompt').textContent = 'Review your experience';
+  $('profile-continue').textContent = $('goal').value === 'offers' ? 'Prepare for my interview →' : ['interviews', 'applications'].includes($('goal').value) ? 'Choose a job to prepare →' : 'Find suitable jobs →';
+  $('profile-context').textContent = 'Check the details from your CV, then choose the role and location you want next. We’ll reuse this profile for each job.';
 }
 function setSaveStatus() { workspace?.changed(); }
 function profileChanged(event) {
@@ -43,6 +43,7 @@ function profileChanged(event) {
     pendingCvFields.clear();
     $('cv-draft-status').textContent = 'Profile reviewed. These details can now be included if you choose encrypted saving.';
   }
+  profileReviewed = $('profile-confirmed').checked;
   syncProfile(); setSaveStatus();
   updateProfilePrompt();
 }
@@ -53,29 +54,24 @@ $('country').addEventListener('change', () => { $('currency').value = $('country
 function showStep(step, focus = true) {
   currentStep = step;
   document.querySelectorAll('.step-panel').forEach(section => { section.hidden = section.id !== `step-${step}`; });
-  document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === step) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
+  document.querySelectorAll('[data-step]').forEach(button => { if (Number(button.dataset.step) === ({ 2: 1, 3: 1, 6: 4, 10: 5 }[step] || step)) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current'); });
   if (step === 3) renderDirections();
   if (step === 4) renderResults();
   if (step === 5) renderDashboard();
-  if (step === 7) renderFirstPlan();
-  if (step === 9) renderInterviewStarter();
   if (step === 10) interviewPrep.open();
   if (step === 8) vacancies.open();
   if (step === 6) applicationPack.render().catch(() => announce('Could not open the application pack. Please try again.'));
-  $('dashboard-link').hidden = step !== 4;
   $('tool-menu').open = false;
-  $('tool-menu').hidden = step === 0;
-  $('plan-home').hidden = step === 0;
-  document.querySelector('.save-bar').hidden = step === 0;
-  $('save-open').hidden = step === 7;
+  document.querySelector('.journey-nav').hidden = step === 0;
   if (focus) {
-    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 7: 'first-plan-title', 8: 'vacancy-pool-title', 9: 'practice-title', 10: 'prep-title' }[step]);
+    const heading = $({ 0: 'situation-title', 1: 'experience-title', 2: 'preferences-title', 3: 'directions-title', 4: 'vacancies-title', 5: 'dashboard-title', 6: 'pack-title', 8: 'vacancy-pool-title', 10: 'prep-title' }[step]);
     heading.focus({ preventScroll: true }); heading.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 }
 function navigate(step) {
   syncProfile();
-  if (step > 1 && ![5, 10].includes(step) && !profileForm.checkValidity()) { showStep(1); profileForm.reportValidity(); return; }
+  const validProfile = [...profileForm.elements].every(input => input.id === 'profile-confirmed' && profileReviewed || input.checkValidity());
+  if ([4, 6, 8].includes(step) && !validProfile) { showStep(1); profileForm.reportValidity(); return; }
   if ([3, 4, 6].includes(step) && !preferencesForm.checkValidity()) { showStep(2); preferencesForm.reportValidity(); return; }
   showStep(step);
 }
@@ -83,54 +79,26 @@ document.querySelectorAll('[data-step]').forEach(button => button.addEventListen
 document.querySelectorAll('[data-back]').forEach(button => button.addEventListener('click', () => navigate(Number(button.dataset.back))));
 $('diagnosis-start').addEventListener('click', event => {
   event.preventDefault();
-  if (!$('workspace').hidden) { navigate(7); return; }
-  workspace.begin();
+  if (!$('workspace').hidden) { navigate(5); return; }
+  entryStep = 0; workspace.begin();
 });
-profileForm.addEventListener('submit', event => { event.preventDefault(); navigate(7); });
-preferencesForm.addEventListener('submit', event => { event.preventDefault(); navigate(3); });
-$('plan-home').addEventListener('click', () => navigate(7));
-$('result-save').addEventListener('click', () => $('save-open').click());
+$('interview-shortcut').addEventListener('click', () => { entryStep = 10; if (!$('workspace').hidden) showStep(10); else workspace.begin(); });
+function focusDestination() { return state.profile.goal === 'offers' ? 10 : ['interviews', 'applications'].includes(state.profile.goal) ? 4 : 8; }
 document.querySelectorAll('[data-goal]').forEach(button => button.addEventListener('click', () => {
-  $('goal').value = button.dataset.goal; profileChanged(); showStep(1);
+  $('goal').value = button.dataset.goal; syncProfile(); updateProfilePrompt(); setSaveStatus();
+  if (state.profile.goal === 'offers') showStep(10);
+  else if (profileReviewed) navigate(focusDestination());
+  else showStep(1);
 }));
+profileForm.addEventListener('submit', event => { event.preventDefault(); if (!profileForm.reportValidity()) return; navigate(focusDestination()); });
+preferencesForm.addEventListener('submit', event => { event.preventDefault(); navigate(8); });
+$('plan-home').addEventListener('click', () => navigate(5));
+document.querySelector('.brand').addEventListener('click', event => { if (!$('workspace').hidden) { event.preventDefault(); navigate(5); } });
 $('check-in-update').addEventListener('click', () => {
   if (!state.jobs.length) { navigate(4); return; }
   $('tracker-title').focus({ preventScroll: true }); $('tracker-title').scrollIntoView({ behavior: 'instant', block: 'start' });
   const form = $('application-list').querySelector('details'); if (form) form.open = true;
 });
-function renderFirstPlan() {
-  syncProfile(); const plan = firstPlan(state);
-  $('first-plan-action').textContent = plan.title;
-  $('first-plan-detail').textContent = plan.detail;
-  $('first-plan-basis').textContent = plan.basis;
-  $('first-plan-evidence').textContent = state.profile.evidence;
-  $('first-plan-limit').textContent = plan.limitation;
-  const button = $('first-plan-continue');
-  button.textContent = plan.action;
-  button.onclick = () => navigate(plan.step);
-  const list = $('first-plan-roles'); list.replaceChildren();
-  if (plan.roles.length) list.append(node('h3', 'Directions for your role focus'));
-  for (const { role, matches, context } of plan.roles) {
-    const card = node('article', undefined, 'card'); card.append(node('h4', role.title));
-    card.append(node('p', context.reason, 'small'));
-    card.append(node('p', matches.length ? 'Confirmed skill connections: ' + matches.map(match => match.supplied).join(', ') : 'No skills have been inferred from your job title. Check the requirements against your experience.', 'small'));
-    card.append(node('p', role.checks[0], 'hint')); list.append(card);
-  }
-}
-
-function renderInterviewStarter() {
-  const profile = state.profile;
-  const role = exploreRoles(profile).find(result => result.context.direct)?.role;
-  const questions = interviewQuestions({ title: profile.targetRole || profile.currentRole, employer: '' }, { roleId: role?.id || '', focus: '' });
-  $('practice-evidence').textContent = profile.evidence;
-  const list = $('starter-questions'); list.replaceChildren();
-  for (const question of questions) {
-    const details = node('details', undefined, 'card practice-question');
-    details.append(node('summary', question.question), node('p', question.guidance, 'muted small'));
-    list.append(details);
-  }
-}
-
 function fillFromCv() {
   const draft = cvProfileDraft($('cv-text').value);
   const filled = [];
@@ -352,6 +320,8 @@ $('cv-file').addEventListener('change', async () => {
 
 function openJob(existing) {
   if (state.jobs.length >= 30 && !existing) { announce('This first version supports 30 vacancies. Remove an old vacancy before adding another.'); return; }
+  jobReturnStep = currentStep === 6 ? 6 : 4;
+  $('job-extra-facts').open = Boolean(existing);
   jobForm.reset(); $('job-error').textContent = '';
   $('job-dialog-title').textContent = existing ? 'Edit your vacancy' : 'Add a vacancy';
   if (existing) {
@@ -372,7 +342,7 @@ jobForm.addEventListener('submit', event => {
   const existing = state.jobs.find(job => job.id === data.id);
   const job = cleanJob({ ...data, source: existing?.source, progress: existing?.progress, id: existing?.id || crypto.randomUUID(), selected: existing?.selected || false, checkedAt: data.status === 'open' ? new Date().toISOString() : '' });
   if (existing) state.jobs[state.jobs.indexOf(existing)] = job; else state.jobs.push(job);
-  $('job-dialog').close(); renderResults(); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
+  $('job-dialog').close(); if (jobReturnStep === 6) openApplication(job.id); else showStep(4); setSaveStatus(); announce('Vacancy saved in this tab and compared with your requirements.');
 });
 
 function listSection(details, title, values) {
@@ -426,14 +396,10 @@ function renderResults() {
     details.append(node('h4', 'Job description you supplied'), node('p', job.description, 'small preserve-lines'));
     card.append(details);
     const checkedAt = Date.parse(job.checkedAt);
-    card.append(node('p', job.status === 'open' && Number.isFinite(checkedAt) ? `You marked the original page open on ${new Date(checkedAt).toLocaleString()}. This is not an independent check or proof of hiring intent.` : job.status === 'closed' ? 'You marked this vacancy as closed.' : 'The current vacancy status has not been checked.', 'hint'));
-    const next = node('p', undefined, 'next-action'); next.append(node('strong', 'Next step'), document.createTextNode(result.nextAction)); card.append(next);
+    details.append(node('p', job.status === 'open' && Number.isFinite(checkedAt) ? `You marked the original page open on ${new Date(checkedAt).toLocaleString()}. This is not an independent check or proof of hiring intent.` : job.status === 'closed' ? 'You marked this vacancy as closed.' : 'The current vacancy status has not been checked.', 'hint'));
+    const next = node('p', undefined, 'next-action'); next.append(node('strong', 'Next step'), document.createTextNode(result.nextAction)); details.append(next);
     const actions = node('div', undefined, 'job-actions');
-    if (result.status !== 'skip') {
-      const select = node('button', job.selected ? 'Added to your plan' : 'Add to your plan', 'secondary'); select.type = 'button'; select.setAttribute('aria-pressed', String(job.selected));
-      select.addEventListener('click', () => { job.selected = !job.selected; select.textContent = job.selected ? 'Added to your plan' : 'Add to your plan'; select.setAttribute('aria-pressed', String(job.selected)); renderPlan(); setSaveStatus(); }); actions.append(select);
-    }
-    const prepare = node('button', 'Build CV & interview pack', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => { navigate(6); applicationPack.render(job.id).catch(() => announce('Please try opening this pack again.')); }); actions.append(prepare);
+    const prepare = node('button', 'Prepare my application', 'primary'); prepare.type = 'button'; prepare.addEventListener('click', () => { openApplication(job.id); }); actions.append(prepare);
     if (job.url) { const link = node('a', 'Open original vacancy'); link.href = job.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link); }
     const edit = node('button', 'Edit', 'text-button'); edit.type = 'button'; edit.setAttribute('aria-label', `Edit ${job.title}`); edit.addEventListener('click', () => openJob(job));
     const remove = node('button', 'Remove', 'text-button danger'); remove.type = 'button'; remove.setAttribute('aria-label', `Remove ${job.title}`);
@@ -446,14 +412,37 @@ function renderPlan() {
   const plan = $('action-list'); plan.replaceChildren();
   const selected = state.jobs.filter(job => job.selected && assessJob(state.profile, job).status !== 'skip');
   const directions = state.roleDirections.map(roleById).filter(Boolean);
+  document.querySelector('.plan').hidden = !selected.length && !directions.length;
   if (!selected.length && !directions.length) { plan.append(node('li', 'Save a role direction or choose a vacancy to add a practical next step here.')); return; }
   for (const role of directions) { const item = node('li'); item.append(node('strong', 'Explore: ' + role.title), node('small', role.example)); plan.append(item); }
   for (const job of selected) { const item = node('li'); item.append(node('strong', job.title), node('small', assessJob(state.profile, job).nextAction)); plan.append(item); }
 }
 $('remove-job-confirm').addEventListener('click', () => { state.jobs = state.jobs.filter(job => job.id !== pendingRemoval); state.packs = state.packs.filter(pack => pack.jobId !== pendingRemoval); pendingRemoval = null; $('remove-job-dialog').close(); renderResults(); announce('Vacancy removed from this tab.'); });
 
+function openApplication(jobId) {
+  navigate(6);
+  if (currentStep === 6) applicationPack.render(jobId).catch(() => announce('Please try opening this application again.'));
+}
+function openInterview(jobId) { showStep(10); interviewPrep.open(jobId); }
+function trackJob(jobId) {
+  showStep(5);
+  const card = [...$('application-list').children].find(item => item.dataset.jobId === jobId);
+  if (card) { card.querySelector('details').open = true; card.querySelector('[name="stage"]').focus(); }
+}
+
 function renderDashboard() {
   syncProfile(); const report = diagnose(state);
+  const next = searchNextAction(state);
+  $('search-next-title').textContent = next.title; $('search-next-detail').textContent = next.detail;
+  $('search-next-action').textContent = next.action;
+  $('search-next-action').onclick = () => next.step === 6 ? openApplication(next.jobId) : next.step === 10 ? openInterview(next.jobId) : next.jobId ? trackJob(next.jobId) : navigate(next.step);
+  $('search-observation').hidden = report.applications < 3;
+  const upcoming = upcomingInterviews(state);
+  $('upcoming-interviews').hidden = !upcoming.length; $('upcoming-list').replaceChildren();
+  for (const job of upcoming) {
+    const item = node('div', undefined, 'upcoming-item'); item.append(node('p', `${job.progress.scheduledAt} · ${job.title} — ${job.employer}`));
+    const button = node('button', 'Prepare for this interview', 'secondary'); button.type = 'button'; button.addEventListener('click', () => openInterview(job.id)); item.append(button); $('upcoming-list').append(item);
+  }
   $('dashboard-goal').textContent = GOALS[state.profile.goal];
   $('dashboard-expectation').textContent = state.profile.expectedOutcome || 'Add what useful progress would look like in your profile.';
   $('dashboard-stats').replaceChildren(...[['Applications', report.applications], ['Reached interview', report.interviews], ['Awaiting reply', report.waiting], ['Current offers', report.offers]].map(([label, value]) => {
@@ -464,21 +453,26 @@ function renderDashboard() {
   $('diagnosis-caveat').textContent = report.caveat;
   $('activity').replaceChildren(...report.weeks.map(week => node('p', `${week.label}: ${week.applications} applications`)));
   const list = $('application-list'); list.replaceChildren();
-  if (!state.jobs.length) list.append(node('p', 'Add a vacancy in Compare vacancies to start tracking. Your dashboard will grow as you record outcomes.', 'empty-state'));
+  if (!state.jobs.length) list.append(node('p', 'No saved jobs yet. Choose a job above to start your first application.', 'empty-state'));
   for (const job of state.jobs) {
     const p = cleanProgress(job.progress), card = node('article', undefined, 'card'); card.dataset.jobId = job.id;
     card.append(node('h3', job.title), node('p', job.employer, 'small muted'), node('p', STAGES[p.stage] + (p.appliedAt ? ` · Applied ${p.appliedAt}` : ''), 'small'));
-    const prepare = node('button', 'Prepare CV & interview pack', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => { navigate(6); applicationPack.render(job.id).catch(() => announce('Please try opening this pack again.')); }); card.append(prepare);
+    const actions = node('div', undefined, 'button-row');
+    const prepare = node('button', 'Review application & CV', 'secondary'); prepare.type = 'button'; prepare.addEventListener('click', () => openApplication(job.id));
+    const interview = node('button', 'Prepare for interview', 'secondary'); interview.type = 'button'; interview.addEventListener('click', () => openInterview(job.id));
+    actions.append(prepare, interview); card.append(actions);
+    if (p.scheduledAt) card.append(node('p', `Scheduled interview: ${p.scheduledAt}`, 'small'));
     const form = node('form', undefined, 'tracker-form'); form.autocomplete = 'off'; const fields = node('div', undefined, 'field-grid');
     const add = (name, label, type, value) => {
       const wrapper = node('div'), id = `track-${job.id}-${name}`, lab = node('label', label); lab.htmlFor = id;
       const input = node(type === 'select' ? 'select' : 'input'); input.id = id; input.name = name;
       if (type === 'select') for (const [key, text] of Object.entries(STAGES)) { const option = node('option', text); option.value = key; input.append(option); }
-      else { input.type = type; if (type === 'text') { input.maxLength = 300; input.spellcheck = false; } if (type === 'date' && name !== 'nextAt') input.max = new Date().toISOString().slice(0, 10); }
+      else { input.type = type; if (type === 'text') { input.maxLength = 300; input.spellcheck = false; } if (type === 'date' && !['nextAt', 'scheduledAt'].includes(name)) input.max = new Date().toISOString().slice(0, 10); }
       input.value = value; wrapper.append(lab, input); fields.append(wrapper);
     };
     add('stage', 'Current application stage', 'select', p.stage);
     add('appliedAt', 'Date you applied', 'date', p.appliedAt);
+    add('scheduledAt', 'Scheduled interview date (optional)', 'date', p.scheduledAt);
     add('interviewAt', 'First completed interview date', 'date', p.interviewAt);
     add('nextAt', 'Next action date (optional)', 'date', p.nextAt);
     add('nextAction', 'Your next action (optional)', 'text', p.nextAction);
@@ -523,17 +517,18 @@ workspace = initWorkspace({
   start: ({ restored }) => {
     document.querySelector('.hero').hidden = true; $('demo-link').hidden = true;
     const complete = state.profile.currentRole.trim() && state.profile.evidence.trim().length >= 20;
-    showStep(restored && complete ? 5 : restored ? 1 : 0);
+    profileReviewed = Boolean(restored && complete);
+    showStep(entryStep === 10 ? 10 : restored && (complete || state.jobs.length) ? 5 : restored ? 1 : 0); entryStep = 0;
   }, announce
 });
 applicationPack = initApplicationPack({ getState: () => state, changed: setSaveStatus, announce,
-  prepareInterview: jobId => { showStep(10); interviewPrep.open(jobId); }
+  prepareInterview: openInterview, trackJob, editJob: openJob
 });
 interviewPrep = initInterviewPrep({ getState: () => state, changed: setSaveStatus, announce,
-  openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }
+  openNotes: async jobId => { showStep(6); await applicationPack.render(jobId); $('interview-practice').open = true; $('interview-title').focus(); $('interview-title').scrollIntoView({ behavior: 'instant', block: 'start' }); }
 });
 vacancies = initVacancies({
-  getState: () => state, navigate,
+  getState: () => state, navigate, prepareJob: openApplication,
   updateSearch: (target, location) => { $('targetRole').value = target; $('locations').value = location; syncProfile(); setSaveStatus(); },
   addJob: vacancy => {
     if (state.jobs.some(job => job.id === vacancy.id || job.url === vacancy.url)) return 'This vacancy is already in your shortlist.';

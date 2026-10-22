@@ -2,7 +2,7 @@ import { parsePool, rankVacancies } from './vacancy-pool.mjs';
 import { jobSearchLinks, searchRoleOptions } from './job-search-links.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, value, className) => { const el = document.createElement(tag); if (value !== undefined) el.textContent = value; if (className) el.className = className; return el; };
-export function initVacancies({ getState, updateSearch, addJob, navigate }) {
+export function initVacancies({ getState, updateSearch, addJob, navigate, prepareJob }) {
   let pool = null, generation = 0, shown = 10, view = 'matched';
   function changeView(next) {
     view = next; shown = 10; render();
@@ -89,10 +89,13 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
       const message = node('p', '', 'small'); message.setAttribute('role', 'status');
       add.addEventListener('click', () => {
         const result = addJob(job);
-        if (result === true) { add.textContent = 'In my shortlist'; add.disabled = true; message.textContent = 'Added. Open My shortlist & comparison when you’re ready to review it.'; }
+        if (result === true) { add.textContent = 'In my shortlist'; add.disabled = true; message.textContent = 'Added. Choose Prepare this application to review the match and build your CV.'; }
         else message.textContent = result;
       });
-      actions.append(add); card.append(actions, message); list.append(card);
+      const prepare = node('button', 'Prepare this application', 'primary'); prepare.type = 'button'; prepare.hidden = !exists;
+      prepare.addEventListener('click', () => prepareJob(job.id));
+      add.addEventListener('click', () => { prepare.hidden = !add.disabled; });
+      actions.append(add, prepare); card.append(actions, message); list.append(card);
     }
     $('vacancy-more').hidden = matches.length <= shown;
   }
@@ -126,7 +129,7 @@ export function initVacancies({ getState, updateSearch, addJob, navigate }) {
   $('vacancy-location').addEventListener('input', () => renderSelectedBoardLinks());
   $('jobsite-role').addEventListener('change', () => renderSelectedBoardLinks());
   return { open() {
-    const { profile } = getState(); $('vacancy-target').value = profile.targetRole; $('vacancy-location').value = profile.locations;
+    const { profile } = getState(); $('vacancy-target').value = profile.targetRole || profile.currentRole; $('vacancy-location').value = profile.locations;
     shown = 10; view = 'matched'; renderBoardLinks(); load();
   } };
 }

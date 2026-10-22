@@ -1,6 +1,6 @@
 # RoleBridge
 
-A private device-only pilot for people exploring their next role after redundancy. The default journey asks for a situation and a short experience summary, then gives one useful next step before offering saving. Manual vacancy entry is retained. Suggested vacancies adds related-title searches on LinkedIn, Indeed and CV-Library plus a prepared UK Reed pool matched locally to a target role and confirmed skills. The external search links work independently of the Reed feed; direct imports from LinkedIn/Indeed/CV-Library are not connected. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
+A private device-only pilot for people exploring their next role after redundancy. Three starting directions lead directly to vacancy search, application preparation or interview preparation, with one returning-user job-search dashboard. Manual vacancy entry is retained. Suggested vacancies adds related-title searches on LinkedIn, Indeed and CV-Library plus a prepared UK Reed pool matched locally to a target role and confirmed skills. The external search links work independently of the Reed feed; direct imports from LinkedIn/Indeed/CV-Library are not connected. The existing CV reader, role explorer and vacancy analysis connect to an encrypted workspace, an application-outcome dashboard, a tailored CV builder and a role-specific interview practice pack. OpenAI remains disconnected.
 
 The homepage also welcomes people looking for their next role without redundancy. Northern Ireland visitors can open NIJobs searches or nijobfinder from the same vacancy page. nijobfinder prefills the selected role using its Keywords parameter, without restricting the job category; the user chooses a location on that site. These are external destinations, not additional imported feeds.
 
@@ -10,15 +10,15 @@ With GitHub Pages configured for `main` → `/ (root)`, the app is served at:
 
 https://cmcgerty88.github.io/Ai-Jobs/
 
-1. Choose **Get my free Job Search Diagnosis**. New visitors start without an account or password; nothing is saved automatically.
-2. Choose the situation closest to yours: unsure which roles to target, applying without interviews, or interviewing without offers.
-3. Add a CV to draft your recent role, recognised skills and up to three examples from the latest identifiable role. Review and edit the fields, then confirm them. Existing entries are kept and your target role remains your choice. Alternatively, choose **I’ll enter my experience myself** and enter a recent role and one short example. The file is read locally; raw CV text is never saved.
-4. Confirm your experience and choose **Show my next step**. Get one practical experiment, its basis and limits. The primary action opens role directions (or vacancy search where the catalogue has no connection), vacancy comparison, or interview practice according to your chosen situation. Recorded application outcomes lead to a dashboard review. An unsupported career still gets a useful way to investigate a vacancy, not a negative employability judgement.
-5. Optionally choose **Save my progress** after the result. Explicit consent and a strong password enable encrypted device-only saving. There is no password reset or cloud account. Unsaved work disappears on refresh or close.
-6. Follow the suggested action or open **More tools → Suggested vacancies**. Search LinkedIn, Indeed or CV-Library for your target or a related title; only the displayed role and location are sent when you choose a link. Manual **Add a vacancy** is still available. Once the Reed feed is connected, choose a target role/location and add a suggestion to your shortlist without retyping it. Comparison, CV/interview packs and tracking then use that record; read the full advert and check missing facts first. Other tools remain optional. Work country stays unknown until selected; skipping preferences does not create a false country match or rejection.
-7. Returning users unlock their existing workspace and see **What’s happened since last time?** Update one application or review a next action. Each application’s outcome form opens separately; goal/activity details and optional feedback are collapsed.
-8. Use **Backup, lock or delete** for encrypted backups and deletion. Downloadable CVs/interview packs remain ordinary unencrypted files.
-Follow the [private pilot guide](docs/PRIVATE-PILOT.md) to test this with real users. Read the [privacy/security review and hosted-account gates](docs/PRIVACY-SECURITY-REVIEW.md) before collecting research data or adding external processing.
+1. Choose **Find my next step**. New visitors start without an account or password; nothing is saved automatically.
+2. Choose one of three directions: **Find roles that suit me**, **Improve my applications**, or **Prepare for an interview**. Role search goes through a reviewed profile to vacancies; applications goes through the profile to saved jobs and CV preparation; interviews opens the dedicated prep form immediately. Switching focus keeps existing entries.
+3. Upload a CV or enter a short profile manually. Review the extracted role, skills and examples; choose a target role and optional location. The app reuses reviewed information. Raw CV text is never saved.
+4. Use the four-stage navigation: **Your profile → Choose a job → Prepare application → Track & prepare**. Optional work preferences and role exploration live under **Preferences & help**. There is no separate starter-plan or generic interview-practice page.
+5. Explore UK/NI vacancies or add an advert. Opening external job-site searches shares only the displayed role/location; candidate data is not submitted to the shared vacancy feed. Review the full advert when a feed supplies only a summary.
+6. From a saved job choose **Prepare my application**. Job-match checks and CV preparation share a page. Review and download the CV, then choose **Track this application** to open that specific job’s update form. Downloads never submit applications.
+7. **My job search** is the returning-user homepage: one next action, saved jobs and upcoming interviews. Record a scheduled interview separately from completed interviews; scheduled dates never inflate interview outcome counts. Each job opens its own CV and interview preparation, including company/screening-call notes and printable PDFs.
+8. Outcome observations are hidden until at least three valid applications have been recorded. They suggest experiments based on entries, not employer decision causes or hiring probabilities.
+9. Saving remains optional and encrypted on this device. Returning users unlock existing data; older saved profiles, CV drafts and interview notes remain compatible. OpenAI remains disconnected.
 
 The original [fictional demo](research/rolebridge-demo.html), [sample PDF](research/rolebridge-sample.pdf), [provisional opportunity report](research/REEMPLOYMENT-OPPORTUNITY-REPORT.md) and [validation kit](research/VALIDATION-KIT.md) remain available.
 
@@ -116,7 +116,7 @@ The current comparison logic is deliberately explicit: unknown essential require
 
 ## CV and interview documents
 
-The CV builder is available from each vacancy, the dashboard, or **CV & interview pack** in the navigation. Add employment/project/voluntary experience (most recent first), education and relevant certifications. Identity/contact fields are optional for an anonymised CV; otherwise give a display name and one contact method. The app never infers your employers, employment dates, qualifications or achievements from raw CV text.
+The CV builder is available through **Prepare my application** on each saved vacancy or **Review application & CV** on My job search. Add employment/project/voluntary experience (most recent first), education and relevant certifications. Identity/contact fields are optional for an anonymised CV; otherwise give a display name and one contact method. The app never infers your employers, employment dates, qualifications or achievements from raw CV text.
 
 Tailoring is local and transparent: confirmed skill labels that occur in the advert are placed first; whole reviewed experience passages with matching longer words are prioritised. Users edit the result. It is not semantic AI analysis. A limited keyword check flags terms for review, never inserts unsupported qualifications and never gives an ATS score. When a profile or advert changes, a warning preserves existing draft edits; refreshing a draft requires confirmation. Career details are shared across packs; each vacancy has separate CV text and interview notes. Deleting a vacancy deletes its pack.
 
@@ -129,7 +129,7 @@ These application documents are **unencrypted downloads** intended for use outsi
 
 ## Dedicated interview preparation
 
-Open **More tools → Interview prep**, or **Create my interview prep pack** from interview practice. This route works without completing the main profile first.
+Choose **Prepare for an interview** at the start, **Already have an interview?** on the landing page, or **Prepare for interview** on a saved job. **Preferences & help → I already have an interview** is also available. This route works without completing the main profile first.
 
 1. Upload a PDF, DOCX or TXT CV, or reuse your workspace experience. Review the role, skills and work examples; unfamiliar layouts have a manual fallback. No contact information is required.
 2. Select a saved vacancy or paste a job title and description. Review one to three suggested advert priorities. Reed imports are short summaries: check the full advert and supply missing requirements.

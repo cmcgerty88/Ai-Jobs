@@ -29,7 +29,7 @@ test('signup to dashboard remembers goals and corrected outcomes without transmi
   const errors = [], requests = []; page.on('pageerror', e => errors.push(e.message));
   page.on('request', r => requests.push({ url: r.url(), method: r.method(), body: r.postData() }));
   await create(page); await profile(page); await job(page);
-  await page.getByRole('button', { name: 'Continue to dashboard' }).click();
+  await tool(page, 5);
   await expect(page.locator('#dashboard-goal')).toHaveText('Get interviews');
   await expect(page.locator('#dashboard-expectation')).toHaveText('A clear next action for two suitable vacancies');
   await expand(page, '.pilot-feedback'); await tracker(page);
@@ -132,7 +132,7 @@ test('blocked storage leaves session usable and saving errors visible without da
 
 test('mobile private signup and dashboard stay within viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await create(page); await profile(page); await job(page);
-  await page.getByRole('button', { name: 'Continue to dashboard' }).click();
+  await tool(page, 5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await expect(page.locator('#diagnosis-caveat')).toContainText('fewer than five'); await saved(page);
 });

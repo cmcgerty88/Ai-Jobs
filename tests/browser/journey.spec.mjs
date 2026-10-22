@@ -17,14 +17,14 @@ async function completeProfile(page, { stopAtDirections = false } = {}) {
   await page.locator('#evidence').fill('Led a team of 9. Planned weekly cover and improved customer service reporting.');
   await page.locator('#skills').fill('Excel, customer service');
   await confirmProfile(page);
-  await page.getByRole('button', { name: 'Show my next step' }).click(); await tool(page, 2);
+  await page.locator('#profile-continue').click(); await tool(page, 2);
   await page.locator('#country').selectOption('GB');
   await page.locator('#minimumSalary').fill('40000');
   await page.locator('#workMode').selectOption('hybrid');
   await page.locator('#maxOfficeDays').selectOption('2');
   await page.locator('#sponsorship').selectOption('no');
-  await page.getByRole('button', { name: 'Explore role directions' }).click();
-  if (!stopAtDirections) await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await page.locator('#preferences-form button[type=submit]').click();
+  await tool(page, stopAtDirections ? 3 : 4);
 }
 async function fillVacancy(page) {
   await page.getByRole('button', { name: 'Add a vacancy', exact: true }).click();
@@ -32,6 +32,7 @@ async function fillVacancy(page) {
   await page.locator('#job-employer').fill('Fictional Test Employer');
   await page.locator('#job-url').fill('https://example.com/jobs/synthetic');
   await page.locator('#job-description').fill('Coordinate customer service, plan schedules and prepare Excel reports. This is a synthetic test vacancy.');
+  await expand(page, '#job-extra-facts');
   await page.locator('#job-country').selectOption('GB');
   await page.locator('#job-min').fill('40000');
   await page.locator('#job-max').fill('46000');
@@ -47,12 +48,12 @@ test('real-input journey, conservative comparison, edits and removal', async ({ 
   await begin(page); await completeProfile(page); await fillVacancy(page);
   await page.getByRole('button', { name: 'Save and compare' }).click();
   await expect(page.locator('.job-card .badge')).toHaveText('Consider');
-  await page.getByRole('button', { name: 'Add to your plan', exact: true }).click();
-  await expect(page.locator('#action-list')).toContainText('Synthetic service coordinator');
+  await expect(page.locator('#job-list')).toContainText('Synthetic service coordinator');
+  await expand(page, '.summary');
   await page.getByRole('button', { name: 'Edit work preferences' }).click();
   await page.locator('#workMode').selectOption('remote');
-  await page.getByRole('button', { name: 'Explore role directions' }).click();
-  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await page.locator('#preferences-form button[type=submit]').click();
+  await tool(page, 4);
   await expect(page.locator('.job-card .badge')).toHaveText('Skip');
   await expect(page.locator('#action-list')).not.toContainText('Synthetic service coordinator');
   await page.getByRole('button', { name: 'Remove Synthetic service coordinator' }).click();
@@ -172,7 +173,7 @@ test('local role directions explain skills, prepare searches and never call an A
   await expect(card).toContainText('not recorded as matching labels');
   await card.getByRole('button', { name: 'Copy search phrases' }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('service delivery coordinator hybrid UK');
-  await page.getByRole('button', { name: 'Continue to vacancies' }).click();
+  await tool(page, 4);
   await expect(page.locator('#action-list')).toContainText('Explore: Service delivery coordinator');
   expect(requests.every(request => request.url.startsWith('http://127.0.0.1:8771/') && request.method === 'GET')).toBeTruthy();
   expect(errors).toEqual([]);

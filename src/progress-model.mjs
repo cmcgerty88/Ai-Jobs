@@ -7,14 +7,15 @@ export function cleanProgress(value = {}) {
   const p = value && typeof value === 'object' ? value : {};
   const appliedAt = validDate(p.appliedAt), interviewAt = validDate(p.interviewAt);
   return { stage: Object.hasOwn(STAGES, p.stage) ? p.stage : 'saved', appliedAt, interviewAt,
-    updatedAt: validDate(p.updatedAt), nextAt: validDate(p.nextAt),
+    updatedAt: validDate(p.updatedAt), scheduledAt: validDate(p.scheduledAt), nextAt: validDate(p.nextAt),
     nextAction: typeof p.nextAction === 'string' ? p.nextAction.slice(0, 300) : '' };
 }
 export function progressError(p, today = new Date().toISOString().slice(0, 10)) {
+  if (p.scheduledAt && (!p.appliedAt || p.scheduledAt < p.appliedAt)) return 'Record an application date on or before the scheduled interview.';
   if (p.stage !== 'saved' && !p.appliedAt) return 'Record the application date first. For a role you never applied to, use Considering.';
   if (p.appliedAt > today || p.interviewAt > today) return 'Application and completed interview dates cannot be in the future.';
   if (p.stage === 'interview' && !p.interviewAt) return 'Record the completed interview date, or keep the application awaiting reply until the interview happens.';
   if (p.interviewAt && (!p.appliedAt || p.interviewAt < p.appliedAt)) return 'An interview date must be on or after the application date.';
-  if (p.stage === 'saved' && (p.appliedAt || p.interviewAt)) return 'Clear the application and interview dates to return to Considering.';
+  if (p.stage === 'saved' && (p.appliedAt || p.interviewAt || p.scheduledAt)) return 'Clear the application, scheduled interview and completed interview dates to return to Considering.';
   return '';
 }

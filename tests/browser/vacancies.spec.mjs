@@ -10,8 +10,6 @@ async function begin(page, prefix = '/') {
   await page.locator('#evidence').fill('Prepared weekly reports and planned customer service schedules.');
   await page.locator('#skills').fill('Excel, customer service, scheduling');
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
-  await page.locator('#first-plan-continue').click(); await expect(page.locator('#step-3')).toBeVisible();
-  await page.locator('[data-role-id="operations-manager"]').getByRole('button', { name: 'Find vacancies for this direction' }).click();
   await expect(page.locator('#step-8')).toBeVisible();
 }
 async function filter(page, target, location = '') {
@@ -30,7 +28,7 @@ test('suggestions use target role, confirmed skills and Belfast location locally
   await page.getByRole('button', { name: 'Add to my shortlist', exact: true }).click();
   await expect(page.getByRole('button', { name: 'In my shortlist', exact: true })).toBeDisabled();
   expect(await page.evaluate(k => localStorage.getItem(k), key)).toBeNull();
-  await page.locator('#step-8').getByRole('button', { name: 'My shortlist & comparison', exact: true }).click();
+  await page.locator('#step-8').getByRole('button', { name: 'My saved jobs', exact: true }).click();
   await expect(page.locator('#job-list .job-card')).toHaveCount(1);
   await expect(page.locator('#job-list')).toContainText('Imported from a Reed summary');
   await expect(page.locator('#job-list .badge')).toHaveText('Investigate');
@@ -40,7 +38,7 @@ test('suggestions use target role, confirmed skills and Belfast location locally
   await expect(page.locator('#job-min')).toHaveValue(''); await expect(page.locator('#job-description')).toHaveValue(/customer service/i);
   await page.getByRole('button', { name: 'Save and compare' }).click();
   await expect(page.locator('#job-list')).toContainText('Imported from a Reed summary');
-  await page.getByRole('button', { name: 'Build CV & interview pack', exact: true }).click();
+  await page.getByRole('button', { name: 'Prepare my application', exact: true }).click();
   await expect(page.locator('#pack-status')).toContainText('short Reed summary');
   await page.locator('#pack-create').click(); await expect(page.locator('#pack-editor')).toBeVisible();
   await page.locator('#cv-anonymous').check(); await page.locator('#cv-history').fill('Synthetic coordinator | 2023–2026\nPrepared weekly reports.');

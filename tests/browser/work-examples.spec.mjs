@@ -38,7 +38,7 @@ test('latest-role examples are reviewed then merged, persist only when chosen, a
   await expect(page.locator('#work-example-status')).toContainText('Added 1 example');
   await page.locator('#currentRole').fill('Release Manager'); await page.locator('#profile-confirmed').check();
   await page.locator('#profile-form button[type="submit"]').click();
-  await page.locator('#result-save').click();
+  await page.locator('#save-open').click();
   const password = 'Synthetic-examples-password!';
   await page.locator('#save-password').fill(password); await page.locator('#save-password-confirm').fill(password);
   await page.locator('#save-consent').check(); await page.locator('#save-confirm').click();

@@ -8,12 +8,13 @@ import { assessJob } from './matching.mjs';
 import { makePdf, makeDocx, downloadDocument } from './document-export.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
-export function initApplicationPack({ getState, changed, announce, prepareInterview }) {
+export function initApplicationPack({ getState, changed, announce, prepareInterview, trackJob, editJob }) {
   let selectedId = '', generation = 0;
   const baseForm = $('cv-base-form'), draftForm = $('cv-draft-form');
   baseForm.reset(); draftForm.reset(); $('cv-reviewed').checked = false; $('interview-focus').value = '';
   const getJob = () => getState().jobs.find(j => j.id === selectedId);
   const getPack = () => getState().packs.find(p => p.jobId === selectedId);
+  $('pack-track').addEventListener('click', () => trackJob(selectedId));
   $('interview-context-open').addEventListener('click', () => prepareInterview(selectedId));
   const option = (value, label) => { const el = node('option', label); el.value = value; return el; };
   $('interview-role').append(option('', 'General / another role'), ...ROLE_CATALOGUE.map(r => option(r.id, r.title)));
@@ -26,8 +27,7 @@ export function initApplicationPack({ getState, changed, announce, prepareInterv
     const checks = [
       issues.length ? 'CV details to complete: ' + issues.join(' ') : 'Core CV sections are present. Review their accuracy before downloading.',
       comparison.failures.length ? 'Resolve this vacancy conflict: ' + comparison.failures[0] : comparison.questions.length ? 'Check the advert: ' + comparison.questions[0] : 'The entered working requirements fit; this does not confirm eligibility.',
-      'Check dates and list experience most recent first. Keep only relevant, truthful information.',
-      `${pack.answers.filter(a => a.answer.trim()).length} of ${interviewQuestions(job, pack).length} practice questions have notes. Practise the answers aloud.`
+      'Check dates and list experience most recent first. Keep only relevant, truthful information.'
     ];
     $('pack-checklist').replaceChildren(...checks.map(s => node('li', s)));
     const review = keywordReview(job, pack);
@@ -57,6 +57,21 @@ export function initApplicationPack({ getState, changed, announce, prepareInterv
     $('pack-job').replaceChildren(...state.jobs.map(j => option(j.id, `${j.title} — ${j.employer}`)));
     $('pack-job').value = selectedId; $('pack-job').disabled = !state.jobs.length;
     const job = getJob(), pack = getPack();
+    const match = $('pack-match'); match.replaceChildren();
+    if (job) {
+      const result = assessJob(state.profile, job);
+      match.append(node('p', 'First · Check this job', 'eyebrow'), node('h3', `${job.title} — ${job.employer}`));
+      match.append(node('p', result.skills.length ? 'Experience to emphasise: ' + result.skills.join(', ') + '. Use concrete examples to support these shared skill mentions.' : 'Compare the essential requirements with your work examples below. No shared terms were recognised by the limited skill dictionary.'));
+      const checks = [...result.failures, ...result.questions];
+      if (checks.length) {
+        const detail = node('details'); detail.append(node('summary', `${checks.length} requirements or facts to check`));
+        const list = node('ul'); checks.forEach(text => list.append(node('li', text))); detail.append(list); match.append(detail);
+      }
+      if (result.failures.length) match.append(node('p', result.failures[0], 'notice'));
+      if (job.source?.summaryOnly) match.append(node('p', 'This is a short provider summary. Add the full job description before relying on the CV or interview preparation.', 'hint'));
+      const edit = node('button', 'Review or update job description', 'text-button'); edit.type = 'button'; edit.addEventListener('click', () => editJob(job)); match.append(edit);
+      const interview = node('button', 'Already have an interview for this job?', 'text-button'); interview.type = 'button'; interview.addEventListener('click', () => prepareInterview(job.id)); match.append(interview);
+    }
     $('pack-empty').hidden = Boolean(job); $('pack-create').hidden = Boolean(pack); $('pack-create').disabled = !job;
     $('pack-delete').hidden = !pack; $('pack-editor').hidden = !pack; $('pack-stale').hidden = true;
     $('pack-status').textContent = pack ? 'This draft belongs to the selected vacancy. Review and edit it before use.' : job ? 'Create a draft from the profile you confirmed, then add your career details.' : '';

@@ -42,8 +42,6 @@ test('CV suggestions show evidence, require confirmation and keep technical role
   await page.locator('#targetRole').fill('Release Manager');
   await page.locator('#evidence').fill('Coordinated release readiness meetings and tracked dependencies.');
   await page.locator('#profile-confirmed').check(); await page.locator('#profile-form button[type="submit"]').click();
-  await expect(page.locator('#first-plan-roles article').first()).toContainText('Release manager');
-  await expect(page.locator('#first-plan-roles')).not.toContainText('Training coordinator');
   await tool(page, 3);
   await expect(page.locator('[data-role-id="release-manager"]')).toBeVisible();
   await expect(page.locator('[data-role-id="release-manager"]')).toContainText('target role: Release Manager');
