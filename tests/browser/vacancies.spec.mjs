@@ -83,10 +83,10 @@ test('unconfigured feed, stale feed, expired jobs and errors show honest states 
 
 test('pool hosting in project path, mobile layout and provider text are safe', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route('**/Ai-Jobs/**', route => route.continue({ url: route.request().url().replace('/Ai-Jobs/', '/') }));
+  await page.route('**/Role-Bridge/**', route => route.continue({ url: route.request().url().replace('/Role-Bridge/', '/') }));
   const data = sample(); data.partial = true; data.jobs[0].employer = '<img src=x onerror="window.unsafe=true">';
   await page.route('**/data/vacancies.json', route => route.fulfill({ json: data }));
-  await begin(page, '/Ai-Jobs/');
+  await begin(page, '/Role-Bridge/');
   await expect(page.locator('#vacancy-pool-status')).toContainText('coverage is reduced');
   await expect(page.locator('.vacancy-suggestion img')).toHaveCount(0);
   expect(await page.evaluate(() => window.unsafe)).toBeUndefined();

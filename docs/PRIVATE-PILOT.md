@@ -4,7 +4,7 @@ The next priority is to see whether a person can get one useful next action, ret
 
 ## Your first run
 
-1. Open https://cmcgerty88.github.io/Ai-Jobs/ and choose **Get my free Job Search Diagnosis**. No signup, payment or vacancy is required to get a first result.
+1. Open https://cmcgerty88.github.io/Role-Bridge/ and choose **Get my free Job Search Diagnosis**. No signup, payment or vacancy is required to get a first result.
 2. Choose the situation closest to yours. Add a CV to draft your recent role, skills and work examples, or enter a recent role and one short example yourself. Review the draft and confirm only facts you can support. Imported draft fields stay out of encrypted saving and backups until reviewed. Remove unnecessary personal details.
 3. Confirm the summary and choose **Show my next step**. Read the priority action and limitations. Can you explain what you will do next, and why? The small editorial library does not cover every career. Missing role suggestions are not a judgement about employability.
 4. If you want to return, choose **Save my progress**. Use your own device and a unique password of 14–256 characters, including an uppercase letter and a special character. There is no reset. Otherwise continue without saving; refresh/close clears that session.

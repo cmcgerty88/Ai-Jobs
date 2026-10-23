@@ -146,8 +146,8 @@ test('mobile journey has no overflow and can complete without a CV', async ({ pa
 });
 
 test('project-subdirectory hosting resolves locally bundled scripts and CV readers', async ({ page }) => {
-  await page.route('**/Ai-Jobs/**', route => route.continue({ url: route.request().url().replace('/Ai-Jobs/', '/') }));
-  await begin(page, '/Ai-Jobs/');
+  await page.route('**/Role-Bridge/**', route => route.continue({ url: route.request().url().replace('/Role-Bridge/', '/') }));
+  await begin(page, '/Role-Bridge/');
   await page.locator('#cv-file').setInputFiles(fileURLToPath(new URL('../fixtures/synthetic-cv.docx', import.meta.url)));
   await expect(page.locator('#cv-text')).toHaveValue(/Synthetic candidate/);
   await completeProfile(page);

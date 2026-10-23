@@ -130,8 +130,8 @@ test('long PDF text paginates without clipping and missing glyphs fail visibly w
 
 test('mobile and project-path hosting support real document downloads, and clear removes document inputs', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route('**/Ai-Jobs/**', route => route.continue({ url: route.request().url().replace('/Ai-Jobs/', '/') }));
-  await start(page, false, '/Ai-Jobs/'); await addJob(page); await createPack(page); await career(page);
+  await page.route('**/Role-Bridge/**', route => route.continue({ url: route.request().url().replace('/Role-Bridge/', '/') }));
+  await start(page, false, '/Role-Bridge/'); await addJob(page); await createPack(page); await career(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.locator('#cv-reviewed').check(); const file = await download(page, 'download-cv-pdf'); expect(file.data.subarray(0, 5).toString()).toBe('%PDF-');
   await privacyControl(page, 'clear-open'); await page.locator('#clear-confirm').click(); await expect(page.locator('.hero')).toBeVisible(); await page.locator('#open-workspace').click();

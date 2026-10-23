@@ -6,7 +6,7 @@ Start with 5–8 adult jobseekers, including people facing redundancy and people
 
 > I’m testing RoleBridge, a tool to help you find suitable jobs, check your experience against an advert and prepare for interviews. Would you try it for about 15 minutes on your own device and tell me what helped or confused you? You can use sample information. Your CV is read in your browser; RoleBridge does not upload it. Saving is optional, encrypted and limited to that browser. The interview pack includes sample answers to adapt, plus printable cheat sheets. This is an early version, with no AI connection or guarantee of interviews.
 >
-> Try it here: https://cmcgerty88.github.io/Ai-Jobs/
+> Try it here: https://cmcgerty88.github.io/Role-Bridge/
 
 Before collecting feedback, give participants your real organiser name/contact, what feedback you will keep, why, who can see it, the deletion date and how to withdraw. See the existing [privacy review](PRIVACY-SECURITY-REVIEW.md#ukeu-gdpr-and-pilot-operations). Do not ask for their CV, passwords, backups, downloaded packs or private screenshots. Keep any recruitment contact list separate from coded feedback. A small assisted pilot on this hosting setup is different from a wider public launch; use a dedicated origin before expanding.
 

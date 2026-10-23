@@ -9,7 +9,7 @@ The homepage also welcomes people looking for their next role without redundancy
 
 With GitHub Pages configured for `main` → `/ (root)`, the app is served at:
 
-https://cmcgerty88.github.io/Ai-Jobs/
+https://cmcgerty88.github.io/Role-Bridge/
 
 1. Choose **Find my next step**. New visitors start without an account or password; nothing is saved automatically.
 2. Choose **Find roles that suit me**, **Check my job matches**, or **Prepare for an interview**. The first two routes use a reviewed profile before opening vacancies or saved-job comparisons. Interview preparation opens directly and does not require completing the main profile.
